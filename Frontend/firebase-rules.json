@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        "activities": {
+          ".indexOn": ["timestamp"],
+          "$activityId": {
+            ".validate": "newData.hasChildren(['type', 'timestamp', 'userId'])"
+          }
+        }
+      }
+    }
+  }
+}
+
