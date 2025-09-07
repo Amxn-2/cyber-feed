@@ -1,41 +1,292 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# ===========================================
+# FRONTEND (Next.js)
+# ===========================================
 
 # dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+Frontend/node_modules
+Frontend/.pnp
+Frontend/.pnp.*
+Frontend/.yarn/*
+!Frontend/.yarn/patches
+!Frontend/.yarn/plugins
+!Frontend/.yarn/releases
+!Frontend/.yarn/versions
 
 # testing
-/coverage
+Frontend/coverage
 
 # next.js
-/.next/
-/out/
+Frontend/.next/
+Frontend/out/
 
 # production
-/build
+Frontend/build
 
-# misc
-.DS_Store
+# typescript
+Frontend/*.tsbuildinfo
+Frontend/next-env.d.ts
+
+# ===========================================
+# BACKEND (Node.js)
+# ===========================================
+
+# dependencies
+Backend/node_modules
+
+# logs
+Backend/logs
+Backend/*.log
+Backend/npm-debug.log*
+Backend/yarn-debug.log*
+Backend/yarn-error.log*
+Backend/.pnpm-debug.log*
+
+# ===========================================
+# PYTHON SCRAPER MICROSERVICE
+# ===========================================
+
+# Python virtual environment
+python-scraper/venv/
+python-scraper/env/
+python-scraper/.venv/
+
+# Python cache
+python-scraper/__pycache__/
+python-scraper/*.py[cod]
+python-scraper/*$py.class
+python-scraper/*.so
+python-scraper/.Python
+python-scraper/build/
+python-scraper/develop-eggs/
+python-scraper/dist/
+python-scraper/downloads/
+python-scraper/eggs/
+python-scraper/.eggs/
+python-scraper/lib/
+python-scraper/lib64/
+python-scraper/parts/
+python-scraper/sdist/
+python-scraper/var/
+python-scraper/wheels/
+python-scraper/share/python-wheels/
+python-scraper/*.egg-info/
+python-scraper/.installed.cfg
+python-scraper/*.egg
+python-scraper/MANIFEST
+
+# PyInstaller
+python-scraper/*.manifest
+python-scraper/*.spec
+
+# Installer logs
+python-scraper/pip-log.txt
+python-scraper/pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+python-scraper/htmlcov/
+python-scraper/.tox/
+python-scraper/.nox/
+python-scraper/.coverage
+python-scraper/.coverage.*
+python-scraper/.cache
+python-scraper/nosetests.xml
+python-scraper/coverage.xml
+python-scraper/*.cover
+python-scraper/*.py,cover
+python-scraper/.hypothesis/
+python-scraper/.pytest_cache/
+python-scraper/cover/
+
+# Scrapy stuff
+python-scraper/.scrapy
+
+# Sphinx documentation
+python-scraper/docs/_build/
+
+# PyBuilder
+python-scraper/.pybuilder/
+python-scraper/target/
+
+# Jupyter Notebook
+python-scraper/.ipynb_checkpoints
+
+# IPython
+python-scraper/profile_default/
+python-scraper/ipython_config.py
+
+# pyenv
+python-scraper/.python-version
+
+# pipenv
+python-scraper/Pipfile.lock
+
+# poetry
+python-scraper/poetry.lock
+
+# pdm
+python-scraper/.pdm.toml
+
+# PEP 582
+python-scraper/__pypackages__/
+
+# Celery stuff
+python-scraper/celerybeat-schedule
+python-scraper/celerybeat.pid
+
+# SageMath parsed files
+python-scraper/*.sage.py
+
+# Environments
+python-scraper/.env
+python-scraper/.venv
+python-scraper/env/
+python-scraper/venv/
+python-scraper/ENV/
+python-scraper/env.bak/
+python-scraper/venv.bak/
+
+# Spyder project settings
+python-scraper/.spyderproject
+python-scraper/.spyproject
+
+# Rope project settings
+python-scraper/.ropeproject
+
+# mkdocs documentation
+python-scraper/site/
+
+# mypy
+python-scraper/.mypy_cache/
+python-scraper/.dmypy.json
+python-scraper/dmypy.json
+
+# Pyre type checker
+python-scraper/.pyre/
+
+# pytype static type analyzer
+python-scraper/.pytype/
+
+# Cython debug symbols
+python-scraper/cython_debug/
+
+# ===========================================
+# ENVIRONMENT FILES & SECRETS
+# ===========================================
+
+# Environment variables (all services)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+
+# API Keys and secrets
+*.key
 *.pem
+*.p12
+*.pfx
+secrets/
+credentials/
 
-# debug
+# ===========================================
+# DATABASE & DATA
+# ===========================================
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Data files
+data/
+*.csv
+*.json
+!package.json
+!package-lock.json
+
+# ===========================================
+# LOGS & TEMPORARY FILES
+# ===========================================
+
+# Log files
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# vercel
+# ===========================================
+# SYSTEM FILES
+# ===========================================
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===========================================
+# DEPLOYMENT & BUILD
+# ===========================================
+
+# Vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Docker
+.dockerignore
+Dockerfile
+docker-compose*.yml
+
+# Kubernetes
+*.kubeconfig
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# ===========================================
+# MONITORING & ANALYTICS
+# ===========================================
+
+# Sentry
+.sentryclirc
+
+# Analytics
+.analytics/
+
+# ===========================================
+# BACKUP & ARCHIVE
+# ===========================================
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+*.7z
