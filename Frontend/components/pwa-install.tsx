@@ -12,9 +12,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
 export function PWAInstall() {
   const [isOpen, setIsOpen] = React.useState(false)
-  const [deferredPrompt, setDeferredPrompt] = React.useState<any>(null)
+  const [deferredPrompt, setDeferredPrompt] = React.useState<BeforeInstallPromptEvent | null>(null)
   const [isInstallable, setIsInstallable] = React.useState(false)
   const [isInstalled, setIsInstalled] = React.useState(false)
 
@@ -30,7 +35,7 @@ export function PWAInstall() {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault()
       // Stash the event so it can be triggered later
-      setDeferredPrompt(e)
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
       // Update UI to notify the user they can install the PWA
       setIsInstallable(true)
     }
@@ -98,12 +103,14 @@ export function PWAInstall() {
           <DialogHeader>
             <DialogTitle>Install CyberFeed</DialogTitle>
             <DialogDescription>
-              Install this application on your device for quick and easy access when you're on the go.
+              Install this application on your device for quick and easy access when you&apos;re on the go.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center gap-4 py-4">
             <div className="rounded-lg bg-primary/10 p-2">
-              <img src="/icons/icon-192x192.png" alt="CyberFeed Logo" className="h-16 w-16" />
+              <div className="h-16 w-16 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                CF
+              </div>
             </div>
             <div>
               <h4 className="text-sm font-medium">CyberFeed</h4>

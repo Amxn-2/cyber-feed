@@ -83,22 +83,13 @@ export function AppSidebar({
           icon: Timer,
           href: "/analytics/timeline",
         },
-        {
-          label: "Threat Map",
-          icon: Map,
-          href: "/analytics/map",
-        },
       ],
     },
     {
       label: "Settings",
       icon: Settings,
       href: "/settings",
-    },
-    {
-      label: "Profile",
-      icon: User,
-      href: "/profile",
+      color: "text-gray-500",
     },
   ]
 
@@ -170,32 +161,45 @@ export function AppSidebar({
                         />
                       </Button>
                       {openSubmenu === route.label && (
-                        <div className="ml-4 mt-1 space-y-1">
+                        <div className="ml-6 mt-1 space-y-1">
                           {route.subItems.map((subItem) => (
-                            <Link key={subItem.label} href={subItem.href}>
-                              <Button
-                                variant={pathname === subItem.href ? "secondary" : "ghost"}
-                                className="w-full justify-start"
-                              >
+                            <Button
+                              key={subItem.label}
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                "w-full justify-start text-sm",
+                                pathname === subItem.href
+                                  ? "bg-accent text-accent-foreground"
+                                  : "text-muted-foreground",
+                              )}
+                              asChild
+                            >
+                              <Link href={subItem.href}>
                                 <subItem.icon className="mr-2 h-4 w-4" />
                                 {subItem.label}
-                              </Button>
-                            </Link>
+                              </Link>
+                            </Button>
                           ))}
                         </div>
                       )}
                     </>
                   ) : (
-                    <Link href={route.href}>
-                      <Button
-                        variant={pathname === route.href ? "secondary" : "ghost"}
-                        className="w-full justify-start"
-                        data-current={pathname === route.href}
-                      >
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "w-full justify-start",
+                        pathname === route.href
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground",
+                      )}
+                      asChild
+                    >
+                      <Link href={route.href}>
                         <route.icon className={cn("mr-2 h-4 w-4", route.color)} />
                         {route.label}
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   )}
                 </div>
               ))}
@@ -224,19 +228,20 @@ export function AppSidebar({
         </div>
       </div>
 
-      {/* Sidebar for desktop */}
-      <aside className={cn("pb-12 w-64 hidden md:block border-r", className)}>
-        <div className="space-y-4 py-4">
-          <div className="px-4 py-2">
-            <div className="flex items-center">
-              <Link href="/dashboard" className="flex items-center">
-                <Shield className="h-6 w-6 text-primary" />
-                <h2 className="ml-2 text-lg font-semibold tracking-tight">CyberFeed</h2>
-              </Link>
-            </div>
+      {/* Sidebar for desktop - Fixed height, no scrolling */}
+      <aside className={cn("w-64 hidden md:block border-r h-screen", className)}>
+        <div className="h-full flex flex-col">
+          {/* Header */}
+          <div className="px-4 py-4 border-b">
+            <Link href="/dashboard" className="flex items-center">
+              <Shield className="h-6 w-6 text-primary" />
+              <h2 className="ml-2 text-lg font-semibold tracking-tight">CyberFeed</h2>
+            </Link>
           </div>
-          <div className="px-3">
-            <div className="space-y-1 sidebar-nav">
+          
+          {/* Navigation - Fixed height, no scrolling */}
+          <div className="flex-1 px-3 py-4">
+            <div className="space-y-1">
               {routes.map((route) => (
                 <div key={route.label}>
                   {route.subItems ? (
@@ -287,27 +292,29 @@ export function AppSidebar({
               ))}
             </div>
           </div>
-        </div>
-        <div className="absolute bottom-4 left-0 right-0 px-3">
-          {isOffline && (
-            <div className="mb-2 flex items-center justify-center rounded-md bg-yellow-500/10 py-1 text-xs text-yellow-500">
-              <WifiOff className="mr-1 h-3 w-3" />
-              Offline Mode
-            </div>
-          )}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <UserAvatar className="h-8 w-8" />
-              <div className="text-sm">
-                <p className="font-medium">{userData?.displayName || "User"}</p>
-                <p className="text-xs text-muted-foreground">{userData?.email}</p>
+          
+          {/* Footer - Fixed at bottom */}
+          <div className="border-t p-3">
+            {isOffline && (
+              <div className="mb-2 flex items-center justify-center rounded-md bg-yellow-500/10 py-1 text-xs text-yellow-500">
+                <WifiOff className="mr-1 h-3 w-3" />
+                Offline Mode
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <ModeToggle />
-              <Button variant="ghost" size="icon" onClick={() => logOut()}>
-                <LogOut className="h-5 w-5" />
-              </Button>
+            )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserAvatar className="h-8 w-8" />
+                <div className="text-sm">
+                  <p className="font-medium">{userData?.displayName || "User"}</p>
+                  <p className="text-xs text-muted-foreground">{userData?.email}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <ModeToggle />
+                <Button variant="ghost" size="icon" onClick={() => logOut()}>
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -316,4 +323,3 @@ export function AppSidebar({
     </div>
   )
 }
-

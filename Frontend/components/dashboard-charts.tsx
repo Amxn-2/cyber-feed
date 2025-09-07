@@ -12,26 +12,39 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { IncidentStats, Incident } from "@/lib/api"
 
 interface DashboardChartsProps {
-  type?: "distribution" | "trends"
+  type?: "distribution" | "trends" | "sources"
+  stats?: IncidentStats | null
+  incidents?: Incident[]
 }
 
-export function DashboardCharts({ type = "distribution" }: DashboardChartsProps) {
+export function DashboardCharts({ type = "distribution", stats, incidents }: DashboardChartsProps) {
   if (type === "trends") {
-    return <TrendAnalysisChart />
+    return <TrendAnalysisChart incidents={incidents} />
+  }
+  
+  if (type === "sources") {
+    return <SourceDistributionChart stats={stats} />
   }
 
-  return <ThreatDistributionChart />
+  return <ThreatDistributionChart stats={stats} />
 }
 
-function ThreatDistributionChart() {
-  const data = [
-    { name: "Ransomware", value: 32, color: "#ef4444" },
-    { name: "DDoS", value: 24, color: "#3b82f6" },
-    { name: "Phishing", value: 18, color: "#22c55e" },
-    { name: "Data Breach", value: 14, color: "#eab308" },
-    { name: "Malware", value: 12, color: "#a855f7" },
+function ThreatDistributionChart({ stats }: { stats?: IncidentStats | null }) {
+  const data = stats?.bySeverity?.map((severity) => ({
+    name: severity.severity,
+    value: severity.count,
+    color: severity.severity === 'Critical' ? '#ef4444' :
+           severity.severity === 'High' ? '#eab308' :
+           severity.severity === 'Medium' ? '#3b82f6' :
+           '#22c55e'
+  })) || [
+    { name: "Critical", value: 0, color: "#ef4444" },
+    { name: "High", value: 0, color: "#eab308" },
+    { name: "Medium", value: 0, color: "#3b82f6" },
+    { name: "Low", value: 0, color: "#22c55e" },
   ]
 
   return (
@@ -68,21 +81,72 @@ function ThreatDistributionChart() {
   )
 }
 
-function TrendAnalysisChart() {
-  const data = [
-    { month: "Jan", critical: 12, high: 24, medium: 45 },
-    { month: "Feb", critical: 15, high: 28, medium: 52 },
-    { month: "Mar", critical: 18, high: 32, medium: 48 },
-    { month: "Apr", critical: 14, high: 38, medium: 58 },
-    { month: "May", critical: 22, high: 35, medium: 62 },
-    { month: "Jun", critical: 19, high: 42, medium: 55 },
-    { month: "Jul", critical: 25, high: 38, medium: 65 },
-    { month: "Aug", critical: 28, high: 45, medium: 68 },
-    { month: "Sep", critical: 22, high: 48, medium: 72 },
-    { month: "Oct", critical: 18, high: 52, medium: 75 },
-    { month: "Nov", critical: 24, high: 48, medium: 80 },
-    { month: "Dec", critical: 30, high: 55, medium: 85 },
-  ]
+function SourceDistributionChart({ stats }: { stats?: IncidentStats | null }) {
+  const data = stats?.bySource?.map((source, index) => ({
+    name: source.source,
+    value: source.count,
+    color: ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'][index % 5]
+  })) || []
+
+  return (
+    <div className="h-[300px] w-full p-4">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={80}
+            paddingAngle={2}
+            dataKey="value"
+            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+            labelLine={false}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value) => [`${value}`, "Incidents"]}
+            contentStyle={{
+              backgroundColor: "var(--background)",
+              borderColor: "var(--border)",
+              borderRadius: "var(--radius)",
+            }}
+          />
+          <Legend layout="vertical" verticalAlign="middle" align="right" wrapperStyle={{ fontSize: "12px" }} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+function TrendAnalysisChart({ incidents }: { incidents?: Incident[] }) {
+  // Generate trend data from incidents (last 7 days)
+  const generateTrendData = () => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      return date.toISOString().split('T')[0]
+    }).reverse()
+
+    return last7Days.map(date => {
+      const dayIncidents = incidents?.filter(incident => 
+        incident.published_date.startsWith(date)
+      ) || []
+
+      return {
+        day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+        critical: dayIncidents.filter(i => i.severity === 'Critical').length,
+        high: dayIncidents.filter(i => i.severity === 'High').length,
+        medium: dayIncidents.filter(i => i.severity === 'Medium').length,
+        low: dayIncidents.filter(i => i.severity === 'Low').length,
+      }
+    })
+  }
+
+  const data = generateTrendData()
 
   return (
     <div className="h-[400px] w-full p-4">

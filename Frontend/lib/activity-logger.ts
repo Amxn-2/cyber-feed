@@ -42,7 +42,7 @@ export const logActivity = async (userId: string, type: ActivityType, details?: 
     const timestampFormatted = now.toISOString()
 
     // Create activity data object, ensuring no undefined values
-    const activityData: Record<string, any> = {
+    const activityData: Record<string, string | number | boolean> = {
       type,
       userId,
       device,

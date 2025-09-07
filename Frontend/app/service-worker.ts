@@ -1,4 +1,6 @@
-const sw = self as unknown as ServiceWorkerGlobalScope & typeof globalThis
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Service Worker
+const sw = self as any
 
 // Cache names
 const CACHE_NAME = "cyber-incident-feed-v2"
@@ -24,7 +26,7 @@ const urlsToCache = [
 ]
 
 // Install event
-sw.addEventListener("install", (event) => {
+sw.addEventListener("install", (event: any) => {
   console.log("Service Worker: Installing...")
 
   // Skip waiting to ensure the new service worker activates immediately
@@ -39,7 +41,7 @@ sw.addEventListener("install", (event) => {
 })
 
 // Activate event - clean up old caches
-sw.addEventListener("activate", (event) => {
+sw.addEventListener("activate", (event: any) => {
   console.log("Service Worker: Activating...")
 
   // Claim clients to ensure the service worker controls all clients immediately
@@ -62,7 +64,7 @@ sw.addEventListener("activate", (event) => {
 })
 
 // Fetch event - network first for API requests, cache first for static assets
-sw.addEventListener("fetch", (event) => {
+sw.addEventListener("fetch", (event: any) => {
   // Skip cross-origin requests
   if (!event.request.url.startsWith(self.location.origin)) {
     return
@@ -120,7 +122,7 @@ sw.addEventListener("fetch", (event) => {
 })
 
 // Push notification event
-sw.addEventListener("push", (event) => {
+sw.addEventListener("push", (event: any) => {
   if (event.data) {
     const data = event.data.json()
 
@@ -144,7 +146,7 @@ sw.addEventListener("push", (event) => {
 })
 
 // Notification click event
-sw.addEventListener("notificationclick", (event) => {
+sw.addEventListener("notificationclick", (event: any) => {
   event.notification.close()
 
   if (event.action === "view" && event.notification.data?.url) {

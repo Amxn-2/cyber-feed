@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,8 +14,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { formatDistanceToNow } from "date-fns"
-import { getActivityDescription } from "@/lib/activity-logger"
-import { FirebaseRulesHelper } from "@/components/firebase-rules-helper"
+import { getActivityDescription, type Activity } from "@/lib/activity-logger"
 
 export default function ProfilePage() {
   const { userData, updateUserProfile, uploadProfilePicture, getUserActivities, logUserActivity, loading, isOffline } =
@@ -39,11 +38,25 @@ export default function ProfilePage() {
 
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const [activities, setActivities] = useState<any[]>([])
+  const [activities, setActivities] = useState<Activity[]>([])
   const [loadingActivities, setLoadingActivities] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [savingPreferences, setSavingPreferences] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const loadActivities = useCallback(async () => {
+    if (isOffline) return
+
+    try {
+      setLoadingActivities(true)
+      const userActivities = await getUserActivities(20)
+      setActivities(userActivities)
+    } catch (error) {
+      console.error("Error loading activities:", error)
+    } finally {
+      setLoadingActivities(false)
+    }
+  }, [isOffline, getUserActivities])
 
   // Initialize form data when userData is loaded
   useEffect(() => {
@@ -68,21 +81,7 @@ export default function ProfilePage() {
       // Load activities
       loadActivities()
     }
-  }, [userData])
-
-  const loadActivities = async () => {
-    if (isOffline) return
-
-    try {
-      setLoadingActivities(true)
-      const userActivities = await getUserActivities(20)
-      setActivities(userActivities)
-    } catch (error) {
-      console.error("Error loading activities:", error)
-    } finally {
-      setLoadingActivities(false)
-    }
-  }
+  }, [userData, loadActivities])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
@@ -127,8 +126,8 @@ export default function ProfilePage() {
       await logUserActivity("profile_update")
       setSuccess("Profile updated successfully")
       setIsEditing(false)
-    } catch (error: any) {
-      setError(error.message || "Failed to update profile")
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Failed to update profile")
     }
   }
 
@@ -147,8 +146,8 @@ export default function ProfilePage() {
       await updateUserProfile({ preferences })
       await logUserActivity("profile_update", "Updated preferences")
       setSuccess("Preferences saved successfully")
-    } catch (error: any) {
-      setError(error.message || "Failed to save preferences")
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Failed to save preferences")
     } finally {
       setSavingPreferences(false)
     }
@@ -186,8 +185,8 @@ export default function ProfilePage() {
       setUploadingImage(true)
       await uploadProfilePicture(file)
       setSuccess("Profile picture updated successfully")
-    } catch (error: any) {
-      setError(error.message || "Failed to upload profile picture")
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Failed to upload profile picture")
     } finally {
       setUploadingImage(false)
       // Clear the input
@@ -212,7 +211,7 @@ export default function ProfilePage() {
   const formatTimestamp = (timestamp: number) => {
     try {
       return formatDistanceToNow(timestamp, { addSuffix: true })
-    } catch (error) {
+    } catch {
       return "Unknown time"
     }
   }
@@ -260,7 +259,7 @@ export default function ProfilePage() {
               <div className="relative">
                 <Avatar className="h-24 w-24">
                   <AvatarImage src={userData?.photoURL || ""} alt={userData?.displayName || "User"} />
-                  <AvatarFallback>{getInitials(userData?.displayName)}</AvatarFallback>
+                  <AvatarFallback>{getInitials(userData?.displayName || null)}</AvatarFallback>
                 </Avatar>
                 <Button
                   size="icon"
@@ -390,7 +389,11 @@ export default function ProfilePage() {
                   <CardTitle>Activity Log</CardTitle>
                   <CardDescription>Recent activity on your account</CardDescription>
                 </CardHeader>
-                {activities.length === 0 && !loadingActivities && !isOffline && <FirebaseRulesHelper />}
+                {activities.length === 0 && !loadingActivities && !isOffline && (
+                  <div className="py-4 text-center text-muted-foreground">
+                    No activity recorded yet. Activities will appear here once you start using the application.
+                  </div>
+                )}
                 <CardContent>
                   {loadingActivities ? (
                     <div className="flex justify-center py-4">

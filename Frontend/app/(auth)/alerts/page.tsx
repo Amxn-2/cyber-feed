@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Bell, CheckCircle, Clock, Filter } from "lucide-react"
+import { Bell, CheckCircle, Clock, Filter, RefreshCw, AlertTriangle, ExternalLink } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -20,58 +20,28 @@ import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-
-const initialAlerts = [
-  {
-    title: "Critical Vulnerability in Apache Log4j",
-    description:
-      "CERT-In has issued an advisory about a critical vulnerability in Apache Log4j that affects multiple systems.",
-    source: "CERT-In",
-    time: "2 hours ago",
-    priority: "Critical",
-    read: false,
-  },
-  {
-    title: "Phishing Campaign Targeting Banking Customers",
-    description: "A new phishing campaign is targeting customers of major Indian banks through SMS and email.",
-    source: "Threat Intelligence",
-    time: "5 hours ago",
-    priority: "High",
-    read: false,
-  },
-  {
-    title: "DDoS Attack on Government Services",
-    description: "Multiple government services are experiencing disruptions due to an ongoing DDoS attack.",
-    source: "NCIIPC",
-    time: "Yesterday",
-    priority: "High",
-    read: true,
-  },
-  {
-    title: "Data Breach at Healthcare Provider",
-    description: "A major healthcare provider has reported a data breach affecting patient records.",
-    source: "Social Media",
-    time: "2 days ago",
-    priority: "Medium",
-    read: true,
-  },
-  {
-    title: "New Ransomware Variant Detected",
-    description: "Security researchers have identified a new ransomware variant targeting Indian organizations.",
-    source: "Threat Intelligence",
-    time: "3 days ago",
-    priority: "Medium",
-    read: true,
-  },
-]
+import { ProtectedRoute } from "@/components/protected-route"
+import { useIncidents } from "@/lib/hooks/useIncidents"
+import { formatDistanceToNow, format } from "date-fns"
+import { Incident } from "@/lib/api"
 
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState(initialAlerts)
+  const [selectedAlert, setSelectedAlert] = useState<Incident | null>(null)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  
+  // Use real data from backend - filter for high priority incidents
+  const { incidents, loading, error, refreshIncidents } = useIncidents({
+    limit: 100
+  })
+  
+  // Filter incidents to show only high priority ones as alerts
+  const alerts = incidents.filter(incident => 
+    incident.severity === 'Critical' || incident.severity === 'High'
+  )
+
   const [activeTab, setActiveTab] = useState("all")
   const [configureDialogOpen, setConfigureDialogOpen] = useState(false)
   const [filterDialogOpen, setFilterDialogOpen] = useState(false)
-  const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false)
-  const [selectedAlert, setSelectedAlert] = useState<(typeof initialAlerts)[0] | null>(null)
   const [filters, setFilters] = useState({
     priority: {
       Critical: true,
@@ -81,9 +51,9 @@ export default function AlertsPage() {
     },
     source: {
       "CERT-In": true,
-      NCIIPC: true,
-      "Threat Intelligence": true,
-      "Social Media": true,
+      "Economic Times CISO": true,
+      "The Hacker News": true,
+      "Business Standard": true,
     },
   })
   const [alertSettings, setAlertSettings] = useState({
@@ -95,30 +65,30 @@ export default function AlertsPage() {
   })
   const [saveSuccess, setSaveSuccess] = useState(false)
 
+  const handleViewAlert = (alert: Incident) => {
+    setSelectedAlert(alert)
+    setDetailModalOpen(true)
+  }
+
   const filteredAlerts = alerts.filter((alert) => {
     if (activeTab === "all") return true
-    if (activeTab === "unread") return !alert.read
-    if (activeTab === "critical") return alert.priority === "Critical"
+    if (activeTab === "unread") return !alert.is_verified // Use is_verified as a proxy for read status
+    if (activeTab === "critical") return alert.severity === "Critical"
     return true
   })
 
-  const markAsRead = (index: number) => {
-    const newAlerts = [...alerts]
-    newAlerts[index].read = true
-    setAlerts(newAlerts)
-  }
 
   const handleFilterChange = (category: string, value: string) => {
     setFilters((prev) => ({
       ...prev,
       [category]: {
         ...prev[category as keyof typeof prev],
-        [value]: !prev[category as keyof typeof prev][value as any],
+        [value]: !(prev[category as keyof typeof prev] as Record<string, boolean>)[value],
       },
     }))
   }
 
-  const handleSettingChange = (setting: string, value: any) => {
+  const handleSettingChange = (setting: string, value: string | boolean) => {
     setAlertSettings((prev) => ({
       ...prev,
       [setting]: value,
@@ -132,11 +102,6 @@ export default function AlertsPage() {
     setTimeout(() => {
       setSaveSuccess(false)
     }, 3000)
-  }
-
-  const handleViewDetails = (alert: (typeof initialAlerts)[0]) => {
-    setSelectedAlert(alert)
-    setViewDetailsDialogOpen(true)
   }
 
   const getPriorityColor = (priority: string) => {
@@ -166,10 +131,20 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <h2 className="text-2xl font-bold tracking-tight">Alerts</h2>
-        <div className="flex flex-wrap items-center gap-2">
+    <ProtectedRoute>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h2 className="text-2xl font-bold tracking-tight">Alerts</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={refreshIncidents}
+              disabled={loading}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
@@ -231,7 +206,7 @@ export default function AlertsPage() {
                 <span className="sm:hidden">Configure</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-900 border shadow-lg">
               <DialogHeader>
                 <DialogTitle>Configure Alert Settings</DialogTitle>
                 <DialogDescription>Customize how you receive alerts and notifications</DialogDescription>
@@ -342,21 +317,29 @@ export default function AlertsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {filteredAlerts.length > 0 ? (
-                  filteredAlerts.map((alert, i) => (
+                {loading ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                  </div>
+                ) : error ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <p className="text-sm text-red-600">Error loading alerts: {error}</p>
+                  </div>
+                ) : filteredAlerts.length > 0 ? (
+                  filteredAlerts.map((alert) => (
                     <div
-                      key={i}
-                      className={cn("flex flex-col rounded-lg border p-4", !alert.read ? "bg-muted/50" : "")}
+                      key={alert._id}
+                      className={cn("flex flex-col rounded-lg border p-4", !alert.is_verified ? "bg-muted/50" : "")}
                     >
                       <div className="flex items-start gap-4">
-                        <div className={cn("rounded-full p-1 shrink-0", getPriorityIconColor(alert.priority))}>
-                          <Bell className="h-5 w-5" />
+                        <div className={cn("rounded-full p-1 shrink-0", getPriorityIconColor(alert.severity))}>
+                          <AlertTriangle className="h-5 w-5" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
                             <h4 className="text-sm font-medium leading-none">{alert.title}</h4>
-                            <Badge className={cn("self-start shrink-0", getPriorityColor(alert.priority))}>
-                              {alert.priority}
+                            <Badge className={cn("self-start shrink-0", getPriorityColor(alert.severity))}>
+                              {alert.severity}
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{alert.description}</p>
@@ -365,22 +348,23 @@ export default function AlertsPage() {
                               <span>Source: {alert.source}</span>
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                {alert.time}
+                                {formatDistanceToNow(new Date(alert.published_date))} ago
                               </span>
+                              <span>Category: {alert.category}</span>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
-                              <Button variant="ghost" size="sm" onClick={() => handleViewDetails(alert)}>
+                              <Button variant="ghost" size="sm" onClick={() => handleViewAlert(alert)}>
                                 View Details
                               </Button>
-                              {!alert.read && (
+                              {alert.url && (
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => markAsRead(i)}
+                                  onClick={() => window.open(alert.url, '_blank')}
                                   className="flex items-center gap-1"
                                 >
-                                  <CheckCircle className="h-3 w-3" />
-                                  <span>Mark as Read</span>
+                                  <ExternalLink className="h-3 w-3" />
+                                  <span>Source</span>
                                 </Button>
                               )}
                             </div>
@@ -406,48 +390,61 @@ export default function AlertsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {filteredAlerts.length > 0 ? (
-                  filteredAlerts.map((alert, i) => (
-                    <div key={i} className="flex flex-col rounded-lg border p-4 bg-muted/50">
-                      <div className="flex items-start gap-4">
-                        <div className={cn("rounded-full p-1 shrink-0", getPriorityIconColor(alert.priority))}>
-                          <Bell className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
-                            <h4 className="text-sm font-medium leading-none">{alert.title}</h4>
-                            <Badge className={cn("self-start shrink-0", getPriorityColor(alert.priority))}>
-                              {alert.priority}
-                            </Badge>
+                {loading ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                  </div>
+                ) : error ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <p className="text-sm text-red-600">Error loading alerts: {error}</p>
+                  </div>
+                ) : filteredAlerts.filter((alert) => !alert.is_verified).length > 0 ? (
+                  filteredAlerts
+                    .filter((alert) => !alert.is_verified)
+                    .map((alert) => (
+                      <div key={alert._id} className="flex flex-col rounded-lg border p-4 bg-muted/50">
+                        <div className="flex items-start gap-4">
+                          <div className={cn("rounded-full p-1 shrink-0", getPriorityIconColor(alert.severity))}>
+                            <AlertTriangle className="h-5 w-5" />
                           </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{alert.description}</p>
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              <span>Source: {alert.source}</span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {alert.time}
-                              </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+                              <h4 className="text-sm font-medium leading-none">{alert.title}</h4>
+                              <Badge className={cn("self-start shrink-0", getPriorityColor(alert.severity))}>
+                                {alert.severity}
+                              </Badge>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
-                              <Button variant="ghost" size="sm" onClick={() => handleViewDetails(alert)}>
-                                View Details
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => markAsRead(i)}
-                                className="flex items-center gap-1"
-                              >
-                                <CheckCircle className="h-3 w-3" />
-                                <span>Mark as Read</span>
-                              </Button>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{alert.description}</p>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                <span>Source: {alert.source}</span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {formatDistanceToNow(new Date(alert.published_date))} ago
+                                </span>
+                                <span>Category: {alert.category}</span>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+                                <Button variant="ghost" size="sm" onClick={() => handleViewAlert(alert)}>
+                                  View Details
+                                </Button>
+                                {alert.url && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(alert.url, '_blank')}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                    <span>Source</span>
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))
                 ) : (
                   <div className="flex h-[200px] items-center justify-center">
                     <p className="text-sm text-muted-foreground">No unread alerts</p>
@@ -465,53 +462,64 @@ export default function AlertsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {filteredAlerts.length > 0 ? (
-                  filteredAlerts.map((alert, i) => (
-                    <div
-                      key={i}
-                      className={cn("flex flex-col rounded-lg border p-4", !alert.read ? "bg-muted/50" : "")}
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-red-100 p-1 text-red-600 dark:bg-red-900 dark:text-red-300 shrink-0">
-                          <Bell className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
-                            <h4 className="text-sm font-medium leading-none">{alert.title}</h4>
-                            <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 self-start shrink-0">
-                              {alert.priority}
-                            </Badge>
+                {loading ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                  </div>
+                ) : error ? (
+                  <div className="flex h-[200px] items-center justify-center">
+                    <p className="text-sm text-red-600">Error loading alerts: {error}</p>
+                  </div>
+                ) : filteredAlerts.filter((alert) => alert.severity === 'Critical').length > 0 ? (
+                  filteredAlerts
+                    .filter((alert) => alert.severity === 'Critical')
+                    .map((alert) => (
+                      <div
+                        key={alert._id}
+                        className={cn("flex flex-col rounded-lg border p-4", !alert.is_verified ? "bg-muted/50" : "")}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="rounded-full bg-red-100 p-1 text-red-600 dark:bg-red-900 dark:text-red-300 shrink-0">
+                            <AlertTriangle className="h-5 w-5" />
                           </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{alert.description}</p>
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              <span>Source: {alert.source}</span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {alert.time}
-                              </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+                              <h4 className="text-sm font-medium leading-none">{alert.title}</h4>
+                              <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300 self-start shrink-0">
+                                {alert.severity}
+                              </Badge>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
-                              <Button variant="ghost" size="sm" onClick={() => handleViewDetails(alert)}>
-                                View Details
-                              </Button>
-                              {!alert.read && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => markAsRead(i)}
-                                  className="flex items-center gap-1"
-                                >
-                                  <CheckCircle className="h-3 w-3" />
-                                  <span>Mark as Read</span>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{alert.description}</p>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                <span>Source: {alert.source}</span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {formatDistanceToNow(new Date(alert.published_date))} ago
+                                </span>
+                                <span>Category: {alert.category}</span>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+                                <Button variant="ghost" size="sm" onClick={() => handleViewAlert(alert)}>
+                                  View Details
                                 </Button>
-                              )}
+                                {alert.url && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(alert.url, '_blank')}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                    <span>Source</span>
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))
                 ) : (
                   <div className="flex h-[200px] items-center justify-center">
                     <p className="text-sm text-muted-foreground">No critical alerts</p>
@@ -522,19 +530,20 @@ export default function AlertsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
 
       {/* Alert Details Dialog */}
-      <Dialog open={viewDetailsDialogOpen} onOpenChange={setViewDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-white dark:bg-gray-900 border shadow-lg">
           {selectedAlert && (
             <>
               <DialogHeader>
                 <div className="flex items-center justify-between gap-2">
                   <DialogTitle>{selectedAlert.title}</DialogTitle>
-                  <Badge className={getPriorityColor(selectedAlert.priority)}>{selectedAlert.priority}</Badge>
+                  <Badge className={getPriorityColor(selectedAlert.severity)}>{selectedAlert.severity}</Badge>
                 </div>
                 <DialogDescription>
-                  Source: {selectedAlert.source} • {selectedAlert.time}
+                  Source: {selectedAlert.source} • {formatDistanceToNow(new Date(selectedAlert.published_date))} ago
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -560,7 +569,7 @@ export default function AlertsPage() {
                 </div>
               </div>
               <DialogFooter className="flex-col sm:flex-row gap-2">
-                <Button variant="outline" onClick={() => setViewDetailsDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setDetailModalOpen(false)}>
                   Close
                 </Button>
                 <Button>Download Full Report</Button>
@@ -569,7 +578,7 @@ export default function AlertsPage() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </ProtectedRoute>
   )
 }
 

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlertTriangle, Bell, Download, Filter, Shield, Zap } from "lucide-react"
+import { AlertTriangle, Bell, Download, Filter, Shield, Zap, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DashboardCharts } from "@/components/dashboard-charts"
 import {
@@ -15,6 +15,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ProtectedRoute } from "@/components/protected-route"
+import { useIncidents } from "@/lib/hooks/useIncidents"
+import { formatDistanceToNow } from "date-fns"
+import { AIAnalysis } from "@/components/ai-analysis"
 
 export default function DashboardPage() {
   const [filterOpen, setFilterOpen] = useState(false)
@@ -26,6 +29,11 @@ export default function DashboardPage() {
       low: true,
     },
     timeframe: "all",
+  })
+
+  // Use real data from backend
+  const { incidents, stats, loading, error, refreshIncidents, collectData } = useIncidents({
+    limit: 10
   })
 
   // Function to handle filter changes
@@ -122,6 +130,26 @@ export default function DashboardPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={refreshIncidents}
+              disabled={loading}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={collectData}
+              disabled={loading}
+            >
+              <Zap className="mr-2 h-4 w-4" />
+              Collect Data
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -140,6 +168,16 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">Error loading data</span>
+            </div>
+            <p className="text-sm text-destructive/80 mt-1">{error}</p>
+          </div>
+        )}
+
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -147,18 +185,24 @@ export default function DashboardPage() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1,248</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : stats?.total || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.today || 0} incidents today
+              </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Threats</CardTitle>
+              <CardTitle className="text-sm font-medium">Recent Incidents</CardTitle>
               <Zap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">42</div>
-              <p className="text-xs text-muted-foreground">+7% from last week</p>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : stats?.recent || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">Last 7 days</p>
             </CardContent>
           </Card>
           <Card>
@@ -167,18 +211,22 @@ export default function DashboardPage() {
               <Bell className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">16</div>
-              <p className="text-xs text-destructive">+24% from yesterday</p>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : stats?.bySeverity?.find(s => s.severity === 'Critical')?.count || 0}
+              </div>
+              <p className="text-xs text-destructive">High priority incidents</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Threat Level</CardTitle>
+              <CardTitle className="text-sm font-medium">Data Sources</CardTitle>
               <Shield className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Elevated</div>
-              <p className="text-xs text-muted-foreground">Updated 2 hours ago</p>
+              <div className="text-2xl font-bold">
+                {loading ? "..." : stats?.bySource?.length || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">Active sources</p>
             </CardContent>
           </Card>
         </div>
@@ -194,6 +242,9 @@ export default function DashboardPage() {
             <TabsTrigger value="reports" className="flex-1">
               Reports
             </TabsTrigger>
+            <TabsTrigger value="ai-analysis" className="flex-1">
+              AI Analysis
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-4">
             <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
@@ -203,46 +254,40 @@ export default function DashboardPage() {
                   <CardDescription>Showing the latest cyber incidents across Indian cyberspace</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="flex items-center gap-4 rounded-lg border p-3">
-                        <div
-                          className={`rounded-full p-1 ${
-                            i % 3 === 0
-                              ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300"
-                              : i % 3 === 1
-                                ? "bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300"
-                                : "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300"
-                          }`}
-                        >
-                          <AlertTriangle className="h-5 w-5" />
+                  {loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {incidents.slice(0, 5).map((incident) => (
+                        <div key={incident._id} className="flex items-center gap-4 rounded-lg border p-3">
+                          <div
+                            className={`rounded-full p-1 ${
+                              incident.severity === 'Critical'
+                                ? "bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300"
+                                : incident.severity === 'High'
+                                  ? "bg-amber-100 text-amber-600 dark:bg-amber-900 dark:text-amber-300"
+                                  : "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300"
+                            }`}
+                          >
+                            <AlertTriangle className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <p className="text-sm font-medium leading-none">
+                              {incident.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {incident.source} • {incident.category}
+                            </p>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(incident.published_date))} ago
+                          </div>
                         </div>
-                        <div className="flex-1 space-y-1">
-                          <p className="text-sm font-medium leading-none">
-                            {i % 3 === 0 ? "Ransomware Attack" : i % 3 === 1 ? "DDoS Attempt" : "Data Breach"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {i % 3 === 0
-                              ? "Financial Sector"
-                              : i % 3 === 1
-                                ? "Government Portal"
-                                : "Healthcare Provider"}
-                          </p>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {i === 1
-                            ? "2 hours ago"
-                            : i === 2
-                              ? "5 hours ago"
-                              : i === 3
-                                ? "Yesterday"
-                                : i === 4
-                                  ? "2 days ago"
-                                  : "3 days ago"}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               <Card className="col-span-1 lg:col-span-3">
@@ -251,7 +296,7 @@ export default function DashboardPage() {
                   <CardDescription>Breakdown by attack vector</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <DashboardCharts />
+                  <DashboardCharts stats={stats} />
                 </CardContent>
               </Card>
             </div>
@@ -263,7 +308,7 @@ export default function DashboardPage() {
                 <CardDescription>Incident trends over the past 30 days</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <DashboardCharts type="trends" />
+                <DashboardCharts type="trends" incidents={incidents} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -307,6 +352,12 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+          <TabsContent value="ai-analysis" className="min-h-[400px] space-y-4">
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+              <AIAnalysis type="threat-summary" />
+              <AIAnalysis type="insights" />
+            </div>
           </TabsContent>
         </Tabs>
       </div>

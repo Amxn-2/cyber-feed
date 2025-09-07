@@ -67,8 +67,8 @@ export default function SettingsPage() {
       await updateUserProfile({ settings })
       await logUserActivity("profile_update", "Updated settings")
       setSuccess("Settings saved successfully")
-    } catch (error: any) {
-      setError(error.message || "Failed to save settings")
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Failed to save settings")
     }
   }
 

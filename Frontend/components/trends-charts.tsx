@@ -14,38 +14,57 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
+import { Incident, IncidentStats } from "@/lib/api"
 
 interface TrendsChartsProps {
   type?: "incidents" | "threats" | "sectors"
+  incidents?: Incident[]
+  stats?: IncidentStats | null
 }
 
-export function TrendsCharts({ type = "incidents" }: TrendsChartsProps) {
+export function TrendsCharts({ type = "incidents", incidents = [], stats }: TrendsChartsProps) {
   if (type === "threats") {
-    return <ThreatTypesChart />
+    return <ThreatTypesChart stats={stats} />
   }
 
   if (type === "sectors") {
-    return <SectorDistributionChart />
+    return <SectorDistributionChart stats={stats} />
   }
 
-  return <IncidentFrequencyChart />
+  return <IncidentFrequencyChart incidents={incidents} />
 }
 
-function IncidentFrequencyChart() {
-  const data = [
-    { month: "Jan", critical: 12, high: 24, medium: 45 },
-    { month: "Feb", critical: 15, high: 28, medium: 52 },
-    { month: "Mar", critical: 18, high: 32, medium: 48 },
-    { month: "Apr", critical: 14, high: 38, medium: 58 },
-    { month: "May", critical: 22, high: 35, medium: 62 },
-    { month: "Jun", critical: 19, high: 42, medium: 55 },
-    { month: "Jul", critical: 25, high: 38, medium: 65 },
-    { month: "Aug", critical: 28, high: 45, medium: 68 },
-    { month: "Sep", critical: 22, high: 48, medium: 72 },
-    { month: "Oct", critical: 18, high: 52, medium: 75 },
-    { month: "Nov", critical: 24, high: 48, medium: 80 },
-    { month: "Dec", critical: 30, high: 55, medium: 85 },
-  ]
+function IncidentFrequencyChart({ incidents }: { incidents: Incident[] }) {
+  // Generate trend data from incidents for the last 7 days
+  const generateTrendData = () => {
+    const data = []
+    const today = new Date()
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today)
+      date.setDate(date.getDate() - i)
+      
+      const dayIncidents = incidents.filter(incident => {
+        const incidentDate = new Date(incident.published_date)
+        return incidentDate.toDateString() === date.toDateString()
+      })
+      
+      const critical = dayIncidents.filter(incident => incident.severity === 'Critical').length
+      const high = dayIncidents.filter(incident => incident.severity === 'High').length
+      const medium = dayIncidents.filter(incident => incident.severity === 'Medium').length
+      
+      data.push({
+        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        critical,
+        high,
+        medium
+      })
+    }
+    
+    return data
+  }
+
+  const data = generateTrendData()
 
   return (
     <div className="h-[400px] w-full p-4">
@@ -61,7 +80,7 @@ function IncidentFrequencyChart() {
         >
           <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
           <XAxis
-            dataKey="month"
+            dataKey="day"
             tick={{ fontSize: 12 }}
             tickLine={{ stroke: "var(--border)" }}
             axisLine={{ stroke: "var(--border)" }}
@@ -112,14 +131,18 @@ function IncidentFrequencyChart() {
   )
 }
 
-function ThreatTypesChart() {
-  const data = [
-    { name: "Ransomware", value: 32, color: "#ef4444" },
-    { name: "DDoS", value: 24, color: "#3b82f6" },
-    { name: "Phishing", value: 18, color: "#22c55e" },
-    { name: "Data Breach", value: 14, color: "#eab308" },
-    { name: "Malware", value: 8, color: "#a855f7" },
-    { name: "Other", value: 4, color: "#6b7280" },
+function ThreatTypesChart({ stats }: { stats?: IncidentStats | null }) {
+  const data = stats?.bySeverity ? stats.bySeverity.map(item => ({
+    name: item.severity,
+    value: item.count,
+    color: item.severity === 'Critical' ? "#ef4444" : 
+           item.severity === 'High' ? "#eab308" :
+           item.severity === 'Medium' ? "#3b82f6" : "#22c55e"
+  })) : [
+    { name: "Critical", value: 0, color: "#ef4444" },
+    { name: "High", value: 0, color: "#eab308" },
+    { name: "Medium", value: 0, color: "#3b82f6" },
+    { name: "Low", value: 0, color: "#22c55e" },
   ]
 
   return (
@@ -156,14 +179,13 @@ function ThreatTypesChart() {
   )
 }
 
-function SectorDistributionChart() {
-  const data = [
-    { name: "Financial", value: 28, color: "#3b82f6" },
-    { name: "Government", value: 22, color: "#ef4444" },
-    { name: "Healthcare", value: 18, color: "#22c55e" },
-    { name: "Technology", value: 15, color: "#eab308" },
-    { name: "Education", value: 10, color: "#a855f7" },
-    { name: "Other", value: 7, color: "#6b7280" },
+function SectorDistributionChart({ stats }: { stats?: IncidentStats | null }) {
+  const data = stats?.bySource ? stats.bySource.map((item, index) => ({
+    name: item.source,
+    value: item.count,
+    color: ["#3b82f6", "#ef4444", "#22c55e", "#eab308", "#a855f7", "#6b7280"][index % 6]
+  })) : [
+    { name: "No Data", value: 0, color: "#6b7280" },
   ]
 
   return (

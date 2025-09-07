@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Shield } from "lucide-react"
@@ -19,8 +19,16 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const { signIn } = useAuth()
+  const { signIn, user, loading } = useAuth()
   const router = useRouter()
+
+  // Redirect if user is already authenticated
+  useEffect(() => {
+    if (!loading && user) {
+      console.log("User authenticated, redirecting to dashboard...")
+      router.push("/dashboard")
+    }
+  }, [user, loading, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,11 +37,20 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password)
-      router.push("/dashboard")
-    } catch (err: any) {
-      setError(err.message || "Failed to sign in")
+      // Redirect will be handled by useEffect when auth state changes
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to sign in")
       setIsLoading(false)
     }
+  }
+
+  // Show loading if auth is initializing
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    )
   }
 
   return (
@@ -100,6 +117,28 @@ export default function LoginPage() {
               ) : (
                 "Sign In"
               )}
+            </Button>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
+            
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full" 
+              onClick={() => {
+                setEmail("demo@cyberfeed.in")
+                setPassword("demo123")
+              }}
+              disabled={isLoading}
+            >
+              Try Demo Account
             </Button>
           </form>
         </div>

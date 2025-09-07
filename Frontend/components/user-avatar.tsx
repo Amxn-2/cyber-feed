@@ -24,7 +24,7 @@ export function UserAvatar({ className }: UserAvatarProps) {
   return (
     <Avatar className={className}>
       <AvatarImage src={userData?.photoURL || ""} alt={userData?.displayName || "User"} />
-      <AvatarFallback>{getInitials(userData?.displayName)}</AvatarFallback>
+      <AvatarFallback>{getInitials(userData?.displayName || null)}</AvatarFallback>
     </Avatar>
   )
 }
