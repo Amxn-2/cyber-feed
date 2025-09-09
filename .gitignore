@@ -28,7 +28,7 @@ Frontend/*.tsbuildinfo
 Frontend/next-env.d.ts
 
 # ===========================================
-# BACKEND (Node.js)
+# BACKEND (Node.js)z
 # ===========================================
 
 # dependencies
