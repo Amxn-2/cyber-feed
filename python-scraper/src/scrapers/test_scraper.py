@@ -10,6 +10,7 @@ import hashlib
 
 from ..models.incident import IncidentModel
 from ..services.mongo_service import MongoService
+from config import Config
 
 logger = logging.getLogger(__name__)
 

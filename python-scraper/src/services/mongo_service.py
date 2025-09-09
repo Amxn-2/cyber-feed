@@ -11,6 +11,7 @@ from pymongo.errors import ConnectionFailure
 from bson import ObjectId
 
 from ..models.incident import IncidentModel
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +27,10 @@ class MongoService:
     def connect(self):
         """Connect to MongoDB"""
         try:
-            mongo_uri = os.getenv("MONGODB_URI", "mongodb+srv://aman:Aman1234@cluster0.azcw7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+            mongo_uri = Config.get_mongodb_uri()
             self.client = MongoClient(mongo_uri)
-            self.db = self.client["cyber-incidents"]
-            self.collection = self.db.incidents
+            self.db = self.client[Config.get_database_name()]
+            self.collection = self.db[Config.get_collection_name()]
             
             # Test connection
             self.client.admin.command('ping')
@@ -72,7 +73,10 @@ class MongoService:
     def get_incidents(self, limit: int = 100, filters: Optional[Dict] = None) -> List[Dict]:
         """Get incidents from MongoDB"""
         try:
-            query = {"location": "India"}  # Always filter for India
+            # Apply India-only filter if configured
+            query = {}
+            if Config.INDIA_ONLY:
+                query["location"] = "India"
             if filters:
                 query.update(filters)
             
@@ -92,23 +96,26 @@ class MongoService:
     def get_incident_stats(self) -> Dict[str, Any]:
         """Get incident statistics"""
         try:
-            india_query = {"location": "India"}
+            # Apply India-only filter if configured
+            base_query = {}
+            if Config.INDIA_ONLY:
+                base_query["location"] = "India"
             
             # Total incidents
-            total = self.collection.count_documents(india_query)
+            total = self.collection.count_documents(base_query)
             
             # Recent incidents (last 24 hours)
             recent_date = datetime.utcnow() - timedelta(days=1)
             recent = self.collection.count_documents({
-                **india_query,
+                **base_query,
                 "created_at": {"$gte": recent_date}
             })
             
             # Sources
-            sources = self.collection.distinct("source", india_query)
+            sources = self.collection.distinct("source", base_query)
             
             # Last updated
-            last_incident = self.collection.find_one(india_query, sort=[("created_at", -1)])
+            last_incident = self.collection.find_one(base_query, sort=[("created_at", -1)])
             last_updated = last_incident.get("created_at") if last_incident else None
             
             return {

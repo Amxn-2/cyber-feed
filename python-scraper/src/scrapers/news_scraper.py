@@ -14,6 +14,7 @@ from urllib.parse import urljoin, urlparse
 
 from ..models.incident import IncidentModel
 from ..services.mongo_service import MongoService
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,9 @@ class NewsScraper:
         incidents = []
         
         try:
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=Config.REQUEST_TIMEOUT)
+            headers = {"User-Agent": Config.USER_AGENT}
+            async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
                 async with session.get(source["url"]) as response:
                     if response.status == 200:
                         content = await response.text()

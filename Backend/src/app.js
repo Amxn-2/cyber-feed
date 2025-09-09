@@ -43,9 +43,18 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/collection', collectionRoutes);
 
-// Health check
+// Health check endpoints
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    service: 'cyber-incident-backend',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
 });
 
 // Error handling

@@ -14,12 +14,16 @@ from src.scrapers.news_scraper import NewsScraper
 from src.scrapers.test_scraper import TestScraper
 from src.services.mongo_service import MongoService
 from src.models.incident import IncidentModel
+from config import Config
 
 # Load environment variables
 load_dotenv()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=getattr(logging, Config.LOG_LEVEL),
+    format=Config.LOG_FORMAT
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -31,7 +35,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:4000"],
+    allow_origins=Config.get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,7 +68,16 @@ async def health_check():
 async def scrape_incidents(request: ScrapeRequest, background_tasks: BackgroundTasks):
     """Trigger incident scraping from various sources"""
     try:
-        sources = request.sources or ["cert-in", "news", "test"]
+        # Get enabled sources from config
+        enabled_sources = []
+        if Config.CERT_IN_ENABLED:
+            enabled_sources.append("cert-in")
+        if Config.NEWS_SCRAPING_ENABLED:
+            enabled_sources.append("news")
+        if Config.TEST_DATA_ENABLED:
+            enabled_sources.append("test")
+        
+        sources = request.sources or enabled_sources
         incidents_collected = 0
         sources_processed = []
         
@@ -154,4 +167,10 @@ async def get_available_sources():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    uvicorn.run(
+        app, 
+        host=Config.HOST, 
+        port=Config.PORT,
+        log_level=Config.LOG_LEVEL.lower(),
+        access_log=True
+    )

@@ -14,6 +14,7 @@ from urllib.parse import urljoin, urlparse
 
 from ..models.incident import IncidentModel
 from ..services.mongo_service import MongoService
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,9 @@ class CertInScraper:
         incidents = []
         
         try:
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=Config.REQUEST_TIMEOUT)
+            headers = {"User-Agent": Config.USER_AGENT}
+            async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
                 # Try RSS feed first
                 rss_incidents = await self._scrape_rss_feed(session)
                 incidents.extend(rss_incidents)
