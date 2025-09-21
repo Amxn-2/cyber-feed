@@ -1,26 +1,50 @@
 // src/routes/analysis.js
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const Incident = require('../models/Incident');
 const geminiService = require('../services/geminiService');
 const logger = require('../utils/logger');
 
+// Rate limiting for AI analysis endpoints
+const aiAnalysisLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 AI analysis requests per windowMs
+  message: {
+    error: 'Too many AI analysis requests',
+    message: 'Please wait before requesting another AI analysis'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Get AI-powered incident analysis
-router.get('/incident/:id', async (req, res) => {
+router.get('/incident/:id', aiAnalysisLimiter, async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Validate input
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ 
+        error: 'Invalid incident ID',
+        message: 'Incident ID must be a valid string'
+      });
+    }
     
     // Find the incident
     const incident = await Incident.findById(id);
     if (!incident) {
-      return res.status(404).json({ error: 'Incident not found' });
+      return res.status(404).json({ 
+        error: 'Incident not found',
+        message: `No incident found with ID: ${id}`
+      });
     }
 
     // Check if Gemini service is available
     if (!geminiService.isAvailable()) {
       return res.status(503).json({ 
         error: 'AI analysis service not available',
-        message: 'Gemini API key not configured'
+        message: 'Gemini API key not configured or service unavailable'
       });
     }
 
@@ -29,16 +53,37 @@ router.get('/incident/:id', async (req, res) => {
     
     res.json({
       success: true,
-      incident: incident,
+      incident: {
+        _id: incident._id,
+        title: incident.title,
+        source: incident.source,
+        category: incident.category,
+        severity: incident.severity,
+        published_date: incident.published_date
+      },
       analysis: analysis,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     logger.error('Failed to analyze incident:', error);
-    res.status(500).json({ 
-      error: 'Failed to analyze incident',
-      message: error.message 
-    });
+    
+    // Handle specific error types
+    if (error.message.includes('quota') || error.message.includes('rate limit')) {
+      return res.status(429).json({ 
+        error: 'AI service quota exceeded',
+        message: 'Please try again later'
+      });
+    } else if (error.message.includes('timeout')) {
+      return res.status(504).json({ 
+        error: 'AI analysis timeout',
+        message: 'The analysis request timed out. Please try again.'
+      });
+    } else {
+      return res.status(500).json({ 
+        error: 'Failed to analyze incident',
+        message: error.message 
+      });
+    }
   }
 });
 
@@ -131,12 +176,34 @@ router.get('/insights', async (req, res) => {
 
 // Get AI service status
 router.get('/status', (req, res) => {
-  res.json({
-    success: true,
-    available: geminiService.isAvailable(),
-    service: 'Google Gemini AI',
-    timestamp: new Date().toISOString()
-  });
+  try {
+    const serviceInfo = geminiService.getServiceInfo();
+    
+    res.json({
+      success: true,
+      available: serviceInfo.available,
+      service: 'Google Gemini AI',
+      model: serviceInfo.model,
+      cache: {
+        size: serviceInfo.cacheSize,
+        timeout: serviceInfo.configuration.cacheTimeout
+      },
+      configuration: {
+        maxRetries: serviceInfo.configuration.maxRetries,
+        timeout: serviceInfo.configuration.timeout,
+        rateLimitDelay: serviceInfo.configuration.rateLimitDelay
+      },
+      lastRequestTime: serviceInfo.lastRequestTime,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    logger.error('Failed to get AI service status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get service status',
+      message: error.message
+    });
+  }
 });
 
 module.exports = router;

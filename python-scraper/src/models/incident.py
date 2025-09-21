@@ -22,8 +22,8 @@ class IncidentModel(BaseModel):
     hash: str = Field(..., description="Unique hash for deduplication")
     tags: Optional[List[str]] = Field(default=[], description="Incident tags")
     is_verified: bool = Field(default=False, description="Verification status")
-    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    createdAt: Optional[datetime] = Field(default_factory=datetime.utcnow, alias="created_at")
+    updatedAt: Optional[datetime] = Field(default_factory=datetime.utcnow, alias="updated_at")
     
     model_config = {
         "validate_by_name": True,

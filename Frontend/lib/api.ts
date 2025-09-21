@@ -151,12 +151,49 @@ export const api = {
   },
 
   /**
-   * Trigger manual data collection
+   * Trigger manual data collection from Python microservice
    */
-  async collectData(): Promise<ApiResponse<{ message: string }>> {
-    return fetchApi<ApiResponse<{ message: string }>>('/api/incidents/collect', {
+  async collectData(sources?: string[], forceRefresh?: boolean): Promise<{
+    success: boolean;
+    message: string;
+    incidents_collected: number;
+    sources_processed: string[];
+    timestamp: string;
+  }> {
+    const response = await fetch(`${API_BASE_URL}/api/collection/trigger`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sources: sources || ['news', 'cert-in'],
+        force_refresh: forceRefresh || false,
+      }),
     });
+    
+    if (!response.ok) {
+      throw new ApiError(`Data collection failed: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Extract data from python_response if it exists
+    if (data.python_response) {
+      return {
+        success: data.success,
+        message: data.message,
+        incidents_collected: data.python_response.incidents_collected || 0,
+        sources_processed: data.python_response.sources_processed || [],
+        timestamp: data.timestamp
+      };
+    }
+    
+    // Fallback to direct response if python_response doesn't exist
+    return {
+      success: data.success,
+      message: data.message,
+      incidents_collected: data.incidents_collected || 0,
+      sources_processed: data.sources_processed || [],
+      timestamp: data.timestamp
+    };
   },
 
   /**

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertTriangle, Bell, Download, Filter, Shield, Zap, RefreshCw } from "lucide-react"
@@ -21,6 +21,7 @@ import { AIAnalysis } from "@/components/ai-analysis"
 
 export default function DashboardPage() {
   const [filterOpen, setFilterOpen] = useState(false)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [filters, setFilters] = useState({
     severity: {
       critical: true,
@@ -32,9 +33,18 @@ export default function DashboardPage() {
   })
 
   // Use real data from backend
-  const { incidents, stats, loading, error, refreshIncidents, collectData } = useIncidents({
+  const { incidents, stats, loading, collecting, error, refreshIncidents, collectData } = useIncidents({
     limit: 10
   })
+
+  // Show success message when data collection completes
+  useEffect(() => {
+    if (!collecting && incidents.length > 0) {
+      setShowSuccessMessage(true)
+      const timer = setTimeout(() => setShowSuccessMessage(false), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [collecting, incidents.length])
 
   // Function to handle filter changes
   const handleFilterChange = (category: string, value: string) => {
@@ -134,7 +144,7 @@ export default function DashboardPage() {
               variant="outline" 
               size="sm" 
               onClick={refreshIncidents}
-              disabled={loading}
+              disabled={loading || collecting}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
@@ -144,10 +154,10 @@ export default function DashboardPage() {
               variant="outline" 
               size="sm" 
               onClick={collectData}
-              disabled={loading}
+              disabled={loading || collecting}
             >
-              <Zap className="mr-2 h-4 w-4" />
-              Collect Data
+              <Zap className={`mr-2 h-4 w-4 ${collecting ? 'animate-pulse' : ''}`} />
+              {collecting ? 'Collecting...' : 'Collect Data'}
             </Button>
 
             <DropdownMenu>
@@ -175,6 +185,18 @@ export default function DashboardPage() {
               <span className="font-medium">Error loading data</span>
             </div>
             <p className="text-sm text-destructive/80 mt-1">{error}</p>
+          </div>
+        )}
+
+        {showSuccessMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 dark:bg-green-900/20 dark:border-green-800">
+            <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+              <Zap className="h-4 w-4" />
+              <span className="font-medium">Data Collection Successful!</span>
+            </div>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Fresh cyber security incidents have been collected and updated in the dashboard.
+            </p>
           </div>
         )}
 

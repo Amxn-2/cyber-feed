@@ -143,11 +143,15 @@ class TestScraper:
                 days_ago = random.randint(1, 7)
                 pub_date = datetime.utcnow() - timedelta(days=days_ago)
                 
-                # Generate unique hash
-                content_hash = hashlib.md5(f"{incident_data['title']}{pub_date.isoformat()}".encode()).hexdigest()
+                # Generate unique hash with timestamp to ensure uniqueness
+                timestamp = datetime.utcnow().isoformat()
+                content_hash = hashlib.md5(f"{incident_data['title']}{pub_date.isoformat()}{timestamp}{random.randint(1000, 9999)}".encode()).hexdigest()
+                
+                # Add timestamp to title to make it unique
+                unique_title = f"{incident_data['title']} - {pub_date.strftime('%Y-%m-%d %H:%M')}"
                 
                 incident = IncidentModel(
-                    title=incident_data["title"],
+                    title=unique_title,
                     description=incident_data["description"],
                     url=incident_data["url"],
                     published_date=pub_date,

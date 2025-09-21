@@ -68,13 +68,14 @@ async def health_check():
 async def scrape_incidents(request: ScrapeRequest, background_tasks: BackgroundTasks):
     """Trigger incident scraping from various sources"""
     try:
-        # Get enabled sources from config
+        # Get enabled sources from config (exclude test data by default)
         enabled_sources = []
         if Config.CERT_IN_ENABLED:
             enabled_sources.append("cert-in")
         if Config.NEWS_SCRAPING_ENABLED:
             enabled_sources.append("news")
-        if Config.TEST_DATA_ENABLED:
+        # Test data is disabled by default - only enable if explicitly requested
+        if Config.TEST_DATA_ENABLED and "test" in (request.sources or []):
             enabled_sources.append("test")
         
         sources = request.sources or enabled_sources
@@ -159,7 +160,7 @@ async def get_available_sources():
                 "id": "test",
                 "name": "Test Data",
                 "description": "Generate test incidents for development",
-                "enabled": True
+                "enabled": Config.TEST_DATA_ENABLED
             }
         ],
         "timestamp": datetime.utcnow().isoformat()

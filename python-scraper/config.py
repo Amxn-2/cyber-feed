@@ -38,7 +38,7 @@ class Config:
     # Scraping Sources Configuration
     CERT_IN_ENABLED = os.getenv("CERT_IN_ENABLED", "True").lower() == "true"
     NEWS_SCRAPING_ENABLED = os.getenv("NEWS_SCRAPING_ENABLED", "True").lower() == "true"
-    TEST_DATA_ENABLED = os.getenv("TEST_DATA_ENABLED", "True").lower() == "true"
+    TEST_DATA_ENABLED = os.getenv("TEST_DATA_ENABLED", "False").lower() == "true"
     
     # Rate Limiting
     RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", 100))

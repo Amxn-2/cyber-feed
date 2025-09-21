@@ -56,7 +56,7 @@ export function IncidentDetailModal({ incident, open, onOpenChange }: IncidentDe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border shadow-lg">
+      <DialogContent className="!max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-900 text-white border-2 border-gray-700 shadow-2xl z-50 p-6">
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -79,9 +79,9 @@ export function IncidentDetailModal({ incident, open, onOpenChange }: IncidentDe
           </div>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 mt-4">
           {/* Incident Overview */}
-          <Card>
+          <Card className="bg-gray-800 border-gray-700 text-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
@@ -92,12 +92,12 @@ export function IncidentDetailModal({ incident, open, onOpenChange }: IncidentDe
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm">
-                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <Globe className="h-4 w-4 text-gray-400" />
                     <span className="font-medium">Source:</span>
                     <span>{incident.source}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <Calendar className="h-4 w-4 text-gray-400" />
                     <span className="font-medium">Published:</span>
                     <span>{format(new Date(incident.published_date), 'PPP')}</span>
                   </div>
@@ -123,13 +123,13 @@ export function IncidentDetailModal({ incident, open, onOpenChange }: IncidentDe
           </Card>
 
           {/* Description */}
-          <Card>
+          <Card className="bg-gray-800 border-gray-700 text-white">
             <CardHeader>
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="prose prose-sm max-w-none">
-                <p className="text-muted-foreground leading-relaxed">
+              <div className="prose prose-sm max-w-none prose-invert">
+                <p className="text-gray-300 leading-relaxed">
                   {incident.description || "No detailed description available for this incident."}
                 </p>
               </div>
@@ -180,27 +180,27 @@ export function IncidentDetailModal({ incident, open, onOpenChange }: IncidentDe
           )}
 
           {/* Technical Details */}
-          <Card>
+          <Card className="bg-gray-800 border-gray-700 text-white">
             <CardHeader>
               <CardTitle>Technical Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 text-sm text-gray-200">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Incident ID:</span>
+                  <span className="text-gray-400">Incident ID:</span>
                   <span className="font-mono">{incident._id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Hash:</span>
+                  <span className="text-gray-400">Hash:</span>
                   <span className="font-mono text-xs">{incident.hash}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Created:</span>
-                  <span>{format(new Date(incident.createdAt), 'PPP p')}</span>
+                  <span className="text-gray-400">Created:</span>
+                  <span>{incident.createdAt ? format(new Date(incident.createdAt), 'PPP p') : 'N/A'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last Updated:</span>
-                  <span>{format(new Date(incident.updatedAt), 'PPP p')}</span>
+                  <span className="text-gray-400">Last Updated:</span>
+                  <span>{incident.updatedAt ? format(new Date(incident.updatedAt), 'PPP p') : 'N/A'}</span>
                 </div>
               </div>
             </CardContent>
