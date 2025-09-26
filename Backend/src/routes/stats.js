@@ -4,6 +4,7 @@ const Incident = require('../models/Incident');
 
 const router = express.Router();
 
+
 // GET /api/stats - Get statistics
 router.get('/', async (req, res, next) => {
   try {
