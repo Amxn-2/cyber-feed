@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 class GeminiService {
   constructor() {
     this.apiKey = process.env.GEMINI_API_KEY;
-    this.modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    this.modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
     this.maxRetries = parseInt(process.env.GEMINI_MAX_RETRIES) || 3;
     this.timeout = parseInt(process.env.GEMINI_TIMEOUT) || 30000;
     this.cache = new Map();
