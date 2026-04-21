@@ -9,14 +9,8 @@ export default function HomePage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading) {
-      if (user) {
-        router.push("/dashboard")
-      } else {
-        router.push("/login")
-      }
-    }
-  }, [user, loading, router])
+    router.push("/dashboard")
+  }, [router])
 
   // Show loading state while checking auth
   return (
