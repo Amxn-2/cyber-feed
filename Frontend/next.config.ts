@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
+const nextConfig: any = {
   // Ignore ESLint and TypeScript errors during build for faster deployment
   eslint: {
     ignoreDuringBuilds: true,
