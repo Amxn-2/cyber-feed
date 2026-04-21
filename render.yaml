@@ -15,6 +15,10 @@ services:
       - key: PORT
         value: 4000
       - key: MONGODB_URI
+        value: placeholder_replace_me_in_render_ui
       - key: FRONTEND_URL
+        value: placeholder_replace_me_in_render_ui
       - key: GEMINI_API_KEY
+        value: placeholder_replace_me_in_render_ui
       - key: GROQ_API_KEY
+        value: placeholder_replace_me_in_render_ui
