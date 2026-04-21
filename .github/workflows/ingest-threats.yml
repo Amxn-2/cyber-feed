@@ -38,5 +38,4 @@ jobs:
 
       - name: Trigger Risk Recalculation
         run: |
-          # Replace 'your-backend-url.onrender.com' with your actual Render URL after deployment
-          curl -X POST https://your-backend-url.onrender.com/api/sectors/recalculate || echo "Backend not deployed yet, skipping trigger."
+          curl -X POST https://cyber-feed-backend.onrender.com/api/sectors/recalculate
