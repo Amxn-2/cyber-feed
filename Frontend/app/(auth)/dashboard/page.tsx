@@ -121,7 +121,7 @@ export default function DashboardPage() {
                             {incident.title}
                           </p>
                           <p className="text-[10px] font-mono text-muted-foreground uppercase opacity-70">
-                            SIG:{incident.source.slice(0,10)} // CAT:{incident.category}
+                            SIG:{incident.source.slice(0,10)} | CAT:{incident.category}
                           </p>
                         </div>
                         <div className="text-[9px] font-mono text-muted-foreground/40 whitespace-nowrap">

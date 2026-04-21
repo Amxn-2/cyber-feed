@@ -137,7 +137,7 @@ export default function IncidentsPage() {
                             </p>
                             <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground uppercase">
                               <span className="text-primary/40">ID: {incident._id.slice(-8)}</span>
-                              <span>//</span>
+                              <span>|</span>
                               <span>{incident.source}</span>
                             </div>
                           </div>
