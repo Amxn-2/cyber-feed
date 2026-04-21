@@ -12,8 +12,8 @@ import hashlib
 import re
 from urllib.parse import urljoin, urlparse
 
-from ..models.incident import IncidentModel
 from ..services.mongo_service import MongoService
+from ..services.enrichment_service import EnrichmentService
 from config import Config
 
 logger = logging.getLogger(__name__)
@@ -25,6 +25,7 @@ class CertInScraper:
         self.base_url = "https://www.cert-in.org.in"
         self.rss_url = "https://www.cert-in.org.in/rss.xml"
         self.mongo_service = MongoService()
+        self.enrichment_service = EnrichmentService()
         
     async def scrape_and_save(self) -> int:
         """Scrape CERT-In data and save to MongoDB"""
@@ -33,10 +34,14 @@ class CertInScraper:
             saved_count = 0
             
             for incident in incidents:
-                if self.mongo_service.save_incident(incident):
+                # Convert model to dict, enrich, then save
+                incident_dict = incident.to_dict()
+                enriched_data = await self.enrichment_service.enrich_incident(incident_dict)
+                
+                if self.mongo_service.save_incident(enriched_data):
                     saved_count += 1
             
-            logger.info(f"CERT-In scraper: Collected {len(incidents)} incidents, saved {saved_count}")
+            logger.info(f"CERT-In scraper: Collected {len(incidents)} incidents, enriched and saved {saved_count}")
             return saved_count
             
         except Exception as e:

@@ -1,11 +1,13 @@
 // server.js
 require('dotenv').config();
+const http = require('http');
 const app = require('./src/app');
 const { initDatabase } = require('./src/config/database');
-// Data collection now handled by Python microservice
+const { initSocket } = require('./src/services/socketService');
 const logger = require('./src/utils/logger');
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
+const server = http.createServer(app);
 
 async function startServer() {
   try {
@@ -13,11 +15,12 @@ async function startServer() {
     await initDatabase();
     logger.info('Database initialized successfully');
 
-    // Data collection now handled by Python microservice
-    logger.info('Data collection handled by Python microservice');
+    // Initialize Socket.io
+    initSocket(server, process.env.FRONTEND_URL);
+    logger.info('Socket.io initialized');
 
     // Start server
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
       console.log(`🚀 Server running on http://localhost:${PORT}`);
     });

@@ -17,6 +17,21 @@ export interface Incident {
   hash: string;
   tags?: string[];
   is_verified: boolean;
+  entities?: {
+    organizations?: string[];
+    threat_actors?: string[];
+    technologies?: string[];
+  };
+  mitre_techniques?: Array<{
+    tactic: string;
+    technique: string;
+    technique_id: string;
+  }>;
+  cve_ids?: string[];
+  cvss_score?: number;
+  ml_severity?: 'Low' | 'Medium' | 'High' | 'Critical';
+  ml_confidence?: number;
+  sector_tags?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +42,10 @@ export interface IncidentStats {
   bySource: Array<{ source: string; count: number }>;
   bySeverity: Array<{ severity: string; count: number }>;
   recent: number;
+  bySector?: Array<{ sector: string; count: number }>;
+  byMitreTactic?: Array<{ tactic: string; count: number }>;
+  topThreatActors?: Array<{ actor: string; count: number }>;
+  cvssDistribution?: Array<{ _id: string; count: number }>;
 }
 
 export interface GeminiAnalysis {

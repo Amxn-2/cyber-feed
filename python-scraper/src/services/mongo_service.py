@@ -6,6 +6,7 @@ import os
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import logging
+import requests
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from bson import ObjectId
@@ -40,18 +41,40 @@ class MongoService:
             logger.error(f"Failed to connect to MongoDB: {e}")
             raise
     
-    def save_incident(self, incident: IncidentModel) -> bool:
-        """Save incident to MongoDB"""
+    def save_incident(self, incident: Any) -> bool:
+        """Save incident to MongoDB (accepts IncidentModel or dict)"""
         try:
+            # Handle both model and dict
+            if hasattr(incident, 'to_dict'):
+                data = incident.to_dict()
+                title = incident.title
+                h = incident.hash
+            else:
+                data = incident
+                title = incident.get('title', 'Unknown')
+                h = incident.get('hash')
+                
+            if not h:
+                logger.error(f"Incident hash missing for: {title}")
+                return False
+
             # Check if incident already exists (by hash)
-            existing = self.collection.find_one({"hash": incident.hash})
+            existing = self.collection.find_one({"hash": h})
             if existing:
-                logger.info(f"Incident already exists: {incident.title}")
+                logger.info(f"Incident already exists: {title} (Hash: {h})")
                 return False
             
             # Insert new incident
-            result = self.collection.insert_one(incident.to_dict())
-            logger.info(f"Saved incident: {incident.title} (ID: {result.inserted_id})")
+            result = self.collection.insert_one(data)
+            logger.info(f"Saved incident: {title} (ID: {result.inserted_id})")
+            
+            # Notify backend for real-time WebSocket update
+            try:
+                data['_id'] = str(result.inserted_id) # Ensure ID is string for JSON
+                requests.post(f"{Config.BACKEND_URL}/api/collection/notify", json={"incident": data}, timeout=2)
+            except Exception as notify_err:
+                logger.debug(f"Failed to notify backend: {notify_err}")
+
             return True
             
         except Exception as e:

@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: cyber-feed-backend
+    runtime: node
+    plan: free
+    region: ohio
+    buildCommand: npm install
+    startCommand: node server.js
+    rootDir: Backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: PORT
+        value: 4000
+      - fromContext: instance.parent.envVars.MONGODB_URI
+        key: MONGODB_URI
+      - fromContext: instance.parent.envVars.FRONTEND_URL
+        key: FRONTEND_URL
+      - fromContext: instance.parent.envVars.GEMINI_API_KEY
+        key: GEMINI_API_KEY
+      - fromContext: instance.parent.envVars.GROQ_API_KEY
+        key: GROQ_API_KEY

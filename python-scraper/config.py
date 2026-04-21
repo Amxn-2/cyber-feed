@@ -16,6 +16,7 @@ class Config:
     PORT = int(os.getenv("PORT", 5000))
     HOST = os.getenv("HOST", "0.0.0.0")
     DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+    BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:3001")
     
     # MongoDB Configuration
     MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://aman:Aman1234@cluster0.azcw7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")

@@ -6,7 +6,39 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
-// GET /api/incidents - Get all incidents with filters
+/**
+ * @openapi
+ * /api/incidents:
+ *   get:
+ *     summary: Get all cyber security incidents
+ *     description: Retrieve a list of incidents with optional filtering by severity, category, or source
+ *     parameters:
+ *       - in: query
+ *         name: severity
+ *         schema:
+ *           type: string
+ *         description: Filter by severity (Critical, High, Medium, Low)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Limit the number of results
+ *     responses:
+ *       200:
+ *         description: A list of incidents
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Incident'
+ */
 router.get('/', async (req, res, next) => {
   try {
     const incidents = await Incident.findAll(req.query);

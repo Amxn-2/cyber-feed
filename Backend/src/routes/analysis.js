@@ -3,7 +3,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const Incident = require('../models/Incident');
-const geminiService = require('../services/geminiService');
+const aiService = require('../services/aiService');
 const logger = require('../utils/logger');
 
 // Rate limiting for AI analysis endpoints
@@ -40,16 +40,16 @@ router.get('/incident/:id', aiAnalysisLimiter, async (req, res) => {
       });
     }
 
-    // Check if Gemini service is available
-    if (!geminiService.isAvailable()) {
+    // Check if AI service is available
+    if (!aiService.isAvailable()) {
       return res.status(503).json({ 
         error: 'AI analysis service not available',
-        message: 'Gemini API key not configured or service unavailable'
+        message: 'Groq API key not configured or service unavailable'
       });
     }
 
     // Generate AI analysis
-    const analysis = await geminiService.analyzeIncident(incident);
+    const analysis = await aiService.analyzeIncident(incident);
     
     res.json({
       success: true,
@@ -106,16 +106,16 @@ router.get('/threat-summary', async (req, res) => {
       });
     }
 
-    // Check if Gemini service is available
-    if (!geminiService.isAvailable()) {
+    // Check if AI service is available
+    if (!aiService.isAvailable()) {
       return res.status(503).json({ 
         error: 'AI analysis service not available',
-        message: 'Gemini API key not configured'
+        message: 'Groq API key not configured'
       });
     }
 
     // Generate threat summary
-    const summary = await geminiService.generateThreatSummary(incidents);
+    const summary = await aiService.generateThreatSummary(incidents);
     
     res.json({
       success: true,
@@ -144,16 +144,16 @@ router.get('/insights', async (req, res) => {
       Incident.getStats()
     ]);
 
-    // Check if Gemini service is available
-    if (!geminiService.isAvailable()) {
+    // Check if AI service is available
+    if (!aiService.isAvailable()) {
       return res.status(503).json({ 
         error: 'AI analysis service not available',
-        message: 'Gemini API key not configured'
+        message: 'Groq API key not configured'
       });
     }
 
     // Generate insights
-    const insights = await geminiService.generateIncidentInsights({
+    const insights = await aiService.generateIncidentInsights({
       recentIncidents: incidents,
       statistics: stats,
       timeRange: 'Last 7 days'
@@ -177,7 +177,7 @@ router.get('/insights', async (req, res) => {
 // Get AI service status
 router.get('/status', (req, res) => {
   try {
-    const serviceInfo = geminiService.getServiceInfo();
+    const serviceInfo = aiService.getServiceInfo();
     
     res.json({
       success: true,

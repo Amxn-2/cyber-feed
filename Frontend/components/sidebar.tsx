@@ -48,24 +48,30 @@ export function AppSidebar({
       label: "Dashboard",
       icon: Home,
       href: "/dashboard",
-      color: "text-sky-500",
+      color: "text-cyan-400",
     },
     {
-      label: "Incidents",
-      icon: AlertCircle,
+      label: "Live Feed",
+      icon: Timer,
       href: "/incidents",
-      color: "text-red-500",
+      color: "text-emerald-400",
     },
     {
-      label: "Alerts",
-      icon: Bell,
-      href: "/alerts",
-      color: "text-yellow-500",
+      label: "Sector Risk",
+      icon: BarChart3,
+      href: "/sectors",
+      color: "text-orange-400",
+    },
+    {
+      label: "Global Monitor",
+      icon: Map,
+      href: "/global-monitor",
+      color: "text-pink-500",
     },
     {
       label: "Analytics",
-      icon: BarChart3,
-      color: "text-green-500",
+      icon: LineChart,
+      color: "text-blue-400",
       href: "/analytics",
       subItems: [
         {
@@ -78,18 +84,7 @@ export function AppSidebar({
           icon: BarChart3,
           href: "/analytics/reports",
         },
-        {
-          label: "Timeline",
-          icon: Timer,
-          href: "/analytics/timeline",
-        },
       ],
-    },
-    {
-      label: "Settings",
-      icon: Settings,
-      href: "/settings",
-      color: "text-gray-500",
     },
   ]
 
@@ -98,7 +93,7 @@ export function AppSidebar({
   }
 
   return (
-    <div className="flex min-h-screen flex-col md:flex-row">
+    <div className="flex h-screen flex-col md:flex-row overflow-hidden">
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div
@@ -206,36 +201,25 @@ export function AppSidebar({
             </div>
           </div>
         </div>
-        <div className="absolute bottom-4 left-0 right-0 px-3">
-          {isOffline && (
-            <div className="mb-2 flex items-center justify-center rounded-md bg-yellow-500/10 py-1 text-xs text-yellow-500">
-              <WifiOff className="mr-1 h-3 w-3" />
-              Offline Mode
-            </div>
-          )}
-          <div className="flex items-center justify-between">
+        <div className="absolute bottom-4 left-0 right-0 px-4">
+          <div className="flex items-center justify-between border-t pt-4">
             <div className="flex items-center gap-2">
-              <UserAvatar className="h-8 w-8" />
-              <div className="text-sm">
-                <p className="font-medium">{userData?.displayName || "User"}</p>
-                <p className="text-xs text-muted-foreground">{userData?.email}</p>
-              </div>
+              <Shield className="h-4 w-4 text-primary" />
+              <span className="text-[10px] font-mono font-bold text-primary tracking-widest">CYBERFEED_v1.0</span>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => logOut()}>
-              <LogOut className="h-5 w-5" />
-            </Button>
+            <ModeToggle />
           </div>
         </div>
       </div>
 
       {/* Sidebar for desktop - Fixed height, no scrolling */}
-      <aside className={cn("w-64 hidden md:block border-r h-screen", className)}>
+      <aside className={cn("w-64 hidden md:block border-r h-screen sticky top-0", className)}>
         <div className="h-full flex flex-col">
           {/* Header */}
           <div className="px-4 py-4 border-b">
             <Link href="/dashboard" className="flex items-center">
-              <Shield className="h-6 w-6 text-primary" />
-              <h2 className="ml-2 text-lg font-semibold tracking-tight">CyberFeed</h2>
+              <Shield className="h-6 w-6 text-primary drop-shadow-[0_0_8px_rgba(0,212,255,0.5)]" />
+              <h2 className="ml-2 text-lg font-bold tracking-widest text-primary glowing-text">CYBERFEED</h2>
             </Link>
           </div>
           
@@ -293,28 +277,13 @@ export function AppSidebar({
             </div>
           </div>
           
-          {/* Footer - Fixed at bottom */}
           <div className="border-t p-3">
-            {isOffline && (
-              <div className="mb-2 flex items-center justify-center rounded-md bg-yellow-500/10 py-1 text-xs text-yellow-500">
-                <WifiOff className="mr-1 h-3 w-3" />
-                Offline Mode
-              </div>
-            )}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <UserAvatar className="h-8 w-8" />
-                <div className="text-sm">
-                  <p className="font-medium">{userData?.displayName || "User"}</p>
-                  <p className="text-xs text-muted-foreground">{userData?.email}</p>
-                </div>
+                <Shield className="h-4 w-4 text-primary" />
+                <span className="text-[10px] font-mono font-bold text-primary tracking-widest">CYBERFEED_OS_v1.0</span>
               </div>
-              <div className="flex items-center gap-2">
-                <ModeToggle />
-                <Button variant="ghost" size="icon" onClick={() => logOut()}>
-                  <LogOut className="h-5 w-5" />
-                </Button>
-              </div>
+              <ModeToggle />
             </div>
           </div>
         </div>

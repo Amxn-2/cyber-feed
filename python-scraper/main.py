@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,6 +7,8 @@ import logging
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from src.scrapers.cert_in_scraper import CertInScraper
 from src.scrapers.news_scraper import NewsScraper
@@ -26,10 +27,41 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize services
+mongo_service = MongoService()
+scheduler = AsyncIOScheduler()
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    scheduler.add_job(
+        run_scrapers, 
+        trigger=CronTrigger(hour="0,6,12,18"),
+        id="scheduled_scrape",
+        replace_existing=True
+    )
+    scheduler.start()
+    logger.info("APScheduler started: Scheduled to run every 6 hours.")
+    
+    # Optionally run an initial scrape on startup if DB is empty
+    stats = mongo_service.get_incident_stats()
+    if stats.get("total", 0) == 0:
+        logger.info("First run detected. Triggering initial scrape...")
+        asyncio.create_task(run_scrapers())
+    
+    yield
+    
+    # Shutdown logic
+    scheduler.shutdown()
+    logger.info("APScheduler shut down.")
+
 app = FastAPI(
     title="Cyber Incident Scraper",
     description="Microservice for scraping cyber security incidents",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware
@@ -41,8 +73,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize services
-mongo_service = MongoService()
+async def run_scrapers(sources=None):
+    """Internal function to run scrapers"""
+    try:
+        enabled_sources = []
+        if Config.CERT_IN_ENABLED:
+            enabled_sources.append("cert-in")
+        if Config.NEWS_SCRAPING_ENABLED:
+            enabled_sources.append("news")
+            
+        sources = sources or enabled_sources
+        incidents_collected = 0
+        
+        logger.info(f"Background scrape starting for sources: {sources}")
+        
+        for source in sources:
+            try:
+                if source == "cert-in":
+                    scraper = CertInScraper()
+                    count = await scraper.scrape_and_save()
+                    incidents_collected += count
+                elif source == "news":
+                    scraper = NewsScraper()
+                    count = await scraper.scrape_and_save()
+                    incidents_collected += count
+                elif source == "test":
+                    scraper = TestScraper()
+                    count = await scraper.scrape_and_save()
+                    incidents_collected += count
+            except Exception as e:
+                logger.error(f"Error scraping {source}: {str(e)}")
+                continue
+                
+        logger.info(f"Background scrape completed. Collected: {incidents_collected}")
+        return incidents_collected
+    except Exception as e:
+        logger.error(f"Background scrape failed: {str(e)}")
+        return 0
+
+# No-op (logic moved to lifespan)
 
 class ScrapeRequest(BaseModel):
     sources: Optional[List[str]] = None
@@ -68,52 +137,16 @@ async def health_check():
 async def scrape_incidents(request: ScrapeRequest, background_tasks: BackgroundTasks):
     """Trigger incident scraping from various sources"""
     try:
-        # Get enabled sources from config (exclude test data by default)
-        enabled_sources = []
-        if Config.CERT_IN_ENABLED:
-            enabled_sources.append("cert-in")
-        if Config.NEWS_SCRAPING_ENABLED:
-            enabled_sources.append("news")
-        # Test data is disabled by default - only enable if explicitly requested
-        if Config.TEST_DATA_ENABLED and "test" in (request.sources or []):
-            enabled_sources.append("test")
-        
-        sources = request.sources or enabled_sources
-        incidents_collected = 0
-        sources_processed = []
-        
-        logger.info(f"Starting scraping for sources: {sources}")
-        
-        # Run scrapers
-        for source in sources:
-            try:
-                if source == "cert-in":
-                    scraper = CertInScraper()
-                    count = await scraper.scrape_and_save()
-                    incidents_collected += count
-                    sources_processed.append("cert-in")
-                    
-                elif source == "news":
-                    scraper = NewsScraper()
-                    count = await scraper.scrape_and_save()
-                    incidents_collected += count
-                    sources_processed.append("news")
-                    
-                elif source == "test":
-                    scraper = TestScraper()
-                    count = await scraper.scrape_and_save()
-                    incidents_collected += count
-                    sources_processed.append("test")
-                    
-            except Exception as e:
-                logger.error(f"Error scraping {source}: {str(e)}")
-                continue
+        sources = request.sources
+        # We use a wrapper to run scrapers and return result immediately or in background
+        # For actual API call, we'll run it synchronously (await) so user gets feedback
+        count = await run_scrapers(sources)
         
         return ScrapeResponse(
             success=True,
-            message=f"Successfully scraped {incidents_collected} incidents",
-            incidents_collected=incidents_collected,
-            sources_processed=sources_processed,
+            message=f"Successfully scraped {count} incidents",
+            incidents_collected=count,
+            sources_processed=sources or ["enabled_sources"],
             timestamp=datetime.utcnow().isoformat()
         )
         

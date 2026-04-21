@@ -1,344 +1,144 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlertTriangle, ChevronLeft, ChevronRight, Filter, RefreshCw } from "lucide-react"
-import { DatePicker } from "@/components/date-picker"
+import { AlertTriangle, ChevronLeft, ChevronRight, RefreshCw, History, Calendar, Clock, Layers } from "lucide-react"
 import { ProtectedRoute } from "@/components/protected-route"
 import { useIncidents } from "@/lib/hooks/useIncidents"
-import { formatDistanceToNow, format } from "date-fns"
-import { Incident } from "@/lib/api"
+import { format, formatDistanceToNow } from "date-fns"
+import { LiveThreatTicker } from "@/components/live-threat-ticker"
 
 export default function TimelinePage() {
   const { incidents, loading, error, refreshIncidents } = useIncidents()
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "Critical":
-        return "bg-red-500"
-      case "High":
-        return "bg-amber-500"
-      case "Medium":
-        return "bg-blue-500"
-      default:
-        return "bg-gray-500"
-    }
-  }
-
-  const getSeverityBadgeColor = (severity: string) => {
-    switch (severity) {
-      case "Critical":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-      case "High":
-        return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
-      case "Medium":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
-    }
-  }
-
-  const getSeverityIconColor = (severity: string) => {
-    switch (severity) {
-      case "Critical":
-        return "text-red-500"
-      case "High":
-        return "text-amber-500"
-      case "Medium":
-        return "text-blue-500"
-      default:
-        return "text-gray-500"
-    }
-  }
-
   return (
     <ProtectedRoute>
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-bold tracking-tight">Incident Timeline</h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={refreshIncidents} disabled={loading}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button variant="outline" size="sm">
-              <Filter className="mr-2 h-4 w-4" />
-              Filter
-            </Button>
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <DatePicker />
-              <Button variant="outline" size="icon" className="h-8 w-8">
-                <ChevronRight className="h-4 w-4" />
+      <div className="flex flex-col gap-6 -m-4 md:-m-6">
+        <LiveThreatTicker />
+
+        <div className="p-4 md:p-6 space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <History className="h-3 w-3 text-primary" />
+                <span className="text-[10px] font-mono text-primary tracking-widest uppercase">HISTORICAL_TIMELINE</span>
+              </div>
+              <h1 className="text-3xl font-black italic tracking-tighter text-primary glowing-text uppercase">INCIDENT CHRONOLOGY</h1>
+              <p className="text-xs font-mono text-muted-foreground uppercase opacity-70">Temporal Signal Audit // Sequential Threat Mapping</p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+               <div className="flex items-center gap-1 cyber-border px-2 py-1 bg-card/30">
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/10">
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
+                <span className="text-[10px] font-mono text-primary px-2">{format(new Date(), 'MMM_yyyy').toUpperCase()}</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/10">
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refreshIncidents}
+                disabled={loading}
+                className="cyber-border ml-2"
+              >
+                <RefreshCw className={`mr-2 h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+                SYNC
               </Button>
             </div>
           </div>
-        </div>
 
-        <Tabs defaultValue="all" className="space-y-4">
-          <div className="overflow-x-auto pb-2">
-            <TabsList className="w-full h-auto inline-flex">
-              <TabsTrigger value="all" className="flex-1">
-                All Incidents
-              </TabsTrigger>
-              <TabsTrigger value="critical" className="flex-1">
-                Critical
-              </TabsTrigger>
-              <TabsTrigger value="high" className="flex-1">
-                High
-              </TabsTrigger>
-              <TabsTrigger value="medium" className="flex-1">
-                Medium
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value="all" className="min-h-[500px] space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Incident Timeline</CardTitle>
-                <CardDescription>Chronological view of cyber incidents</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                  </div>
-                ) : error ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <p className="text-sm text-red-600">Error loading incidents: {error}</p>
-                  </div>
-                ) : incidents.length === 0 ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <p className="text-sm text-muted-foreground">No incidents found</p>
-                  </div>
-                ) : (
-                  <div className="relative space-y-8 before:absolute before:inset-0 before:left-9 before:border-l-2 before:border-dashed pl-10">
-                    {incidents
-                      .sort((a, b) => new Date(b.published_date).getTime() - new Date(a.published_date).getTime())
-                      .map((incident) => (
-                        <div key={incident._id} className="relative">
-                          <div className="absolute -left-10 mt-1.5 h-5 w-5 rounded-full border border-background bg-background">
-                            <div className={`absolute inset-0 m-1 rounded-full ${getSeverityColor(incident.severity)}`}></div>
-                          </div>
-                          <div className="flex flex-col space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <div className="text-sm font-medium text-muted-foreground">
-                                {format(new Date(incident.published_date), 'MMM dd, yyyy')} • {format(new Date(incident.published_date), 'HH:mm')}
-                              </div>
-                              <div className={`rounded-full px-2 py-0.5 text-xs font-medium ${getSeverityBadgeColor(incident.severity)}`}>
-                                {incident.severity}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle className={`h-4 w-4 ${getSeverityIconColor(incident.severity)}`} />
-                              <div className="font-medium">{incident.title}</div>
-                            </div>
-                            <div className="text-sm text-muted-foreground">{incident.description}</div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>Source: {incident.source}</span>
-                              <span>•</span>
-                              <span>Category: {incident.category}</span>
-                            </div>
-                            <div className="pt-1">
-                              <Button variant="outline" size="sm">
-                                View Details
-                              </Button>
-                            </div>
-                          </div>
+          <Tabs defaultValue="all" className="space-y-6">
+            <div className="border-b border-primary/10">
+              <TabsList className="bg-transparent h-auto p-0 gap-8">
+                {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM'].map((tab) => (
+                  <TabsTrigger 
+                    key={tab}
+                    value={tab.toLowerCase()} 
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary font-mono text-[10px] tracking-widest px-0 pb-2 bg-transparent uppercase"
+                  >
+                    {tab}_SEVERITY
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+
+            <TabsContent value="all" className="m-0 focus-visible:ring-0">
+               {loading ? (
+                <div className="flex h-[400px] items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent shadow-[0_0_15px_rgba(0,212,255,0.5)]"></div>
+                </div>
+              ) : (
+                <div className="relative space-y-6 before:absolute before:inset-0 before:left-[11px] before:border-l before:border-primary/20 pl-8">
+                  {incidents
+                    .sort((a, b) => new Date(b.published_date).getTime() - new Date(a.published_date).getTime())
+                    .map((incident, i) => (
+                      <div key={incident._id} className="relative group">
+                        {/* Timeline Node */}
+                        <div className={`absolute -left-[30px] mt-1.5 h-[15px] w-[15px] rounded-full border-2 border-background z-10 ${
+                            incident.severity === 'Critical' ? 'bg-destructive shadow-[0_0_10px_rgba(255,59,59,0.5)]' : 
+                            incident.severity === 'High' ? 'bg-orange-500 shadow-[0_0_10px_rgba(255,165,0,0.5)]' : 
+                            'bg-primary shadow-[0_0_10px_rgba(0,212,255,0.5)]'
+                        }`}>
+                            <div className="absolute inset-0 animate-ping rounded-full bg-inherit opacity-20" />
                         </div>
-                      ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="critical" className="min-h-[500px] space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Critical Incidents</CardTitle>
-                <CardDescription>Timeline of critical severity incidents</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                  </div>
-                ) : error ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <p className="text-sm text-red-600">Error loading incidents: {error}</p>
-                  </div>
-                ) : incidents.filter(incident => incident.severity === 'Critical').length === 0 ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <p className="text-sm text-muted-foreground">No critical incidents found</p>
-                  </div>
-                ) : (
-                  <div className="relative space-y-8 before:absolute before:inset-0 before:left-9 before:border-l-2 before:border-dashed pl-10">
-                    {incidents
-                      .filter(incident => incident.severity === 'Critical')
-                      .sort((a, b) => new Date(b.published_date).getTime() - new Date(a.published_date).getTime())
-                      .map((incident) => (
-                        <div key={incident._id} className="relative">
-                          <div className="absolute -left-10 mt-1.5 h-5 w-5 rounded-full border border-background bg-background">
-                            <div className="absolute inset-0 m-1 rounded-full bg-red-500"></div>
-                          </div>
-                          <div className="flex flex-col space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <div className="text-sm font-medium text-muted-foreground">
-                                {format(new Date(incident.published_date), 'MMM dd, yyyy')} • {format(new Date(incident.published_date), 'HH:mm')}
-                              </div>
-                              <div className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-300">
-                                {incident.severity}
-                              </div>
+                        
+                        <Card className="cyber-card bg-card/30 group-hover:bg-primary/[0.03] transition-colors">
+                          <CardContent className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+                            {/* Timestamp */}
+                            <div className="md:col-span-1 space-y-1">
+                                <div className="flex items-center gap-2 text-[10px] font-mono text-primary uppercase">
+                                    <Calendar className="h-3 w-3" />
+                                    {format(new Date(incident.published_date), 'yyyy-MM-dd')}
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground uppercase opacity-70">
+                                    <Clock className="h-3 w-3" />
+                                    {format(new Date(incident.published_date), 'HH:mm:ss')} UTC
+                                </div>
+                                <div className="text-[9px] font-mono text-muted-foreground/50 uppercase mt-2">
+                                    {formatDistanceToNow(new Date(incident.published_date)).toUpperCase()} AGO
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle className="h-4 w-4 text-red-500" />
-                              <div className="font-medium">{incident.title}</div>
+
+                            {/* Content */}
+                            <div className="md:col-span-3 space-y-3">
+                                <div className="flex items-start justify-between gap-4">
+                                    <h3 className="text-sm font-bold uppercase tracking-tight group-hover:text-primary transition-colors">
+                                        {incident.title}
+                                    </h3>
+                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                                        incident.severity === 'Critical' ? 'border-destructive text-destructive' :
+                                        incident.severity === 'High' ? 'border-orange-500 text-orange-500' : 'border-primary text-primary'
+                                    }`}>
+                                        {incident.severity.toUpperCase()}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                                    {incident.description}
+                                </p>
+                                <div className="flex flex-wrap gap-4 pt-1">
+                                    <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground uppercase">
+                                        <Layers className="h-3 w-3 opacity-50" />
+                                        SOURCE: <span className="text-primary/70">{incident.source.toUpperCase()}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground uppercase">
+                                        <AlertTriangle className="h-3 w-3 opacity-50" />
+                                        CAT: <span className="text-emerald-400/70">{incident.category.toUpperCase()}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="text-sm text-muted-foreground">{incident.description}</div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>Source: {incident.source}</span>
-                              <span>•</span>
-                              <span>Category: {incident.category}</span>
-                            </div>
-                            <div className="pt-1">
-                              <Button variant="outline" size="sm">
-                                View Details
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="high" className="min-h-[500px] space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>High Severity Incidents</CardTitle>
-                <CardDescription>Timeline of high severity incidents</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                  </div>
-                ) : error ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <p className="text-sm text-red-600">Error loading incidents: {error}</p>
-                  </div>
-                ) : incidents.filter(incident => incident.severity === 'High').length === 0 ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <p className="text-sm text-muted-foreground">No high severity incidents found</p>
-                  </div>
-                ) : (
-                  <div className="relative space-y-8 before:absolute before:inset-0 before:left-9 before:border-l-2 before:border-dashed pl-10">
-                    {incidents
-                      .filter(incident => incident.severity === 'High')
-                      .sort((a, b) => new Date(b.published_date).getTime() - new Date(a.published_date).getTime())
-                      .map((incident) => (
-                        <div key={incident._id} className="relative">
-                          <div className="absolute -left-10 mt-1.5 h-5 w-5 rounded-full border border-background bg-background">
-                            <div className="absolute inset-0 m-1 rounded-full bg-amber-500"></div>
-                          </div>
-                          <div className="flex flex-col space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <div className="text-sm font-medium text-muted-foreground">
-                                {format(new Date(incident.published_date), 'MMM dd, yyyy')} • {format(new Date(incident.published_date), 'HH:mm')}
-                              </div>
-                              <div className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-300">
-                                {incident.severity}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle className="h-4 w-4 text-amber-500" />
-                              <div className="font-medium">{incident.title}</div>
-                            </div>
-                            <div className="text-sm text-muted-foreground">{incident.description}</div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>Source: {incident.source}</span>
-                              <span>•</span>
-                              <span>Category: {incident.category}</span>
-                            </div>
-                            <div className="pt-1">
-                              <Button variant="outline" size="sm">
-                                View Details
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="medium" className="min-h-[500px] space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Medium Severity Incidents</CardTitle>
-                <CardDescription>Timeline of medium severity incidents</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-                  </div>
-                ) : error ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <p className="text-sm text-red-600">Error loading incidents: {error}</p>
-                  </div>
-                ) : incidents.filter(incident => incident.severity === 'Medium').length === 0 ? (
-                  <div className="flex h-[400px] items-center justify-center">
-                    <p className="text-sm text-muted-foreground">No medium severity incidents found</p>
-                  </div>
-                ) : (
-                  <div className="relative space-y-8 before:absolute before:inset-0 before:left-9 before:border-l-2 before:border-dashed pl-10">
-                    {incidents
-                      .filter(incident => incident.severity === 'Medium')
-                      .sort((a, b) => new Date(b.published_date).getTime() - new Date(a.published_date).getTime())
-                      .map((incident) => (
-                        <div key={incident._id} className="relative">
-                          <div className="absolute -left-10 mt-1.5 h-5 w-5 rounded-full border border-background bg-background">
-                            <div className="absolute inset-0 m-1 rounded-full bg-blue-500"></div>
-                          </div>
-                          <div className="flex flex-col space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <div className="text-sm font-medium text-muted-foreground">
-                                {format(new Date(incident.published_date), 'MMM dd, yyyy')} • {format(new Date(incident.published_date), 'HH:mm')}
-                              </div>
-                              <div className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                                {incident.severity}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <AlertTriangle className="h-4 w-4 text-blue-500" />
-                              <div className="font-medium">{incident.title}</div>
-                            </div>
-                            <div className="text-sm text-muted-foreground">{incident.description}</div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>Source: {incident.source}</span>
-                              <span>•</span>
-                              <span>Category: {incident.category}</span>
-                            </div>
-                            <div className="pt-1">
-                              <Button variant="outline" size="sm">
-                                View Details
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </ProtectedRoute>
   )

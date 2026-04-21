@@ -53,7 +53,31 @@ const incidentSchema = new mongoose.Schema({
   is_verified: {
     type: Boolean,
     default: false
-  }
+  },
+  // ML and Intelligence Fields
+  entities: {
+    organizations: [String],
+    locations: [String],
+    technologies: [String],
+    threat_actors: [String]
+  },
+  mitre_techniques: [{
+    id: String,
+    name: String,
+    tactic: String,
+    url: String
+  }],
+  cve_ids: [String],
+  cvss_score: {
+    type: Number,
+    default: 0
+  },
+  ml_severity: {
+    type: String,
+    enum: ['Low', 'Medium', 'High', 'Critical']
+  },
+  ml_confidence: Number,
+  sector_tags: [String]
 }, {
   timestamps: true, // Automatically adds createdAt and updatedAt
   indexes: [
@@ -135,6 +159,23 @@ class Incident {
         query.$text = { $search: filters.search };
       }
 
+      // New Intelligence Filters
+      if (filters.mitre_tactic) {
+        query['mitre_techniques.tactic'] = filters.mitre_tactic;
+      }
+      
+      if (filters.sector) {
+        query.sector_tags = filters.sector;
+      }
+      
+      if (filters.has_cve === 'true') {
+        query.cve_ids = { $exists: true, $not: { $size: 0 } };
+      }
+      
+      if (filters.ml_severity) {
+        query.ml_severity = filters.ml_severity;
+      }
+
       const limit = parseInt(filters.limit) || 50;
       const page = parseInt(filters.page) || 1;
       const skip = (page - 1) * limit;
@@ -163,7 +204,11 @@ class Incident {
         todayCount,
         sourceStats,
         severityStats,
-        recentCount
+        recentCount,
+        sectorStats,
+        mitreStats,
+        topActors,
+        cvssStats
       ] = await Promise.all([
         // Total incidents (India only)
         IncidentModel.countDocuments(indiaQuery),
@@ -171,32 +216,71 @@ class Incident {
         // Today's incidents (India only)
         IncidentModel.countDocuments({
           ...indiaQuery,
-          createdAt: {
-            $gte: new Date(new Date().setHours(0, 0, 0, 0))
+          published_date: {
+            $gte: new Date(new Date().setUTCHours(0, 0, 0, 0))
           }
         }),
         
-        // By source (India only)
+        // By source
         IncidentModel.aggregate([
           { $match: indiaQuery },
           { $group: { _id: '$source', count: { $sum: 1 } } },
           { $project: { source: '$_id', count: 1, _id: 0 } }
         ]),
         
-        // By severity (India only)
+        // By severity
         IncidentModel.aggregate([
           { $match: indiaQuery },
           { $group: { _id: '$severity', count: { $sum: 1 } } },
           { $project: { severity: '$_id', count: 1, _id: 0 } }
         ]),
         
-        // Recent (last 7 days, India only)
+        // Recent (7 days)
         IncidentModel.countDocuments({
           ...indiaQuery,
-          createdAt: {
+          published_date: {
             $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
           }
-        })
+        }),
+
+        // By Sector
+        IncidentModel.aggregate([
+          { $match: indiaQuery },
+          { $unwind: '$sector_tags' },
+          { $group: { _id: '$sector_tags', count: { $sum: 1 } } },
+          { $project: { sector: '$_id', count: 1, _id: 0 } }
+        ]),
+
+        // By MITRE Tactic
+        IncidentModel.aggregate([
+          { $match: indiaQuery },
+          { $unwind: '$mitre_techniques' },
+          { $group: { _id: '$mitre_techniques.tactic', count: { $sum: 1 } } },
+          { $project: { tactic: '$_id', count: 1, _id: 0 } }
+        ]),
+
+        // Top Threat Actors
+        IncidentModel.aggregate([
+          { $match: indiaQuery },
+          { $unwind: '$entities.threat_actors' },
+          { $group: { _id: '$entities.threat_actors', count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+          { $project: { actor: '$_id', count: 1, _id: 0 } }
+        ]),
+
+        // CVSS Distribution
+        IncidentModel.aggregate([
+          { $match: { ...indiaQuery, cvss_score: { $gt: 0 } } },
+          {
+            $bucket: {
+              groupBy: "$cvss_score",
+              boundaries: [0, 4, 7, 9, 10.1],
+              default: "Unknown",
+              output: { count: { $sum: 1 } }
+            }
+          }
+        ])
       ]);
 
       return {
@@ -204,11 +288,42 @@ class Incident {
         today: todayCount,
         bySource: sourceStats,
         bySeverity: severityStats,
-        recent: recentCount
+        recent: recentCount,
+        bySector: sectorStats,
+        byMitreTactic: mitreStats,
+        topThreatActors: topActors,
+        cvssDistribution: cvssStats
       };
     } catch (error) {
       logger.error('Failed to get stats:', error);
       throw error;
+    }
+  }
+
+  static async getDailyStats(days = 30) {
+    try {
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+      
+      return await IncidentModel.aggregate([
+        {
+          $match: {
+            location: 'India',
+            published_date: { $gte: startDate }
+          }
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$published_date" } },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } },
+        { $project: { date: "$_id", count: 1, _id: 0 } }
+      ]);
+    } catch (error) {
+      logger.error('Failed to get daily stats:', error);
+      return [];
     }
   }
 
@@ -236,4 +351,11 @@ class Incident {
 
 const IncidentModel = mongoose.model('Incident', incidentSchema);
 
-module.exports = Incident;
+// Attach methods to the model so existing code doesn't break
+IncidentModel.customCreate = Incident.create;
+IncidentModel.findAll = Incident.findAll;
+IncidentModel.getStats = Incident.getStats;
+IncidentModel.getDailyStats = Incident.getDailyStats;
+IncidentModel.search = Incident.search;
+
+module.exports = IncidentModel;

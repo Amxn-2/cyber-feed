@@ -14,6 +14,7 @@ from urllib.parse import urljoin, urlparse
 
 from ..models.incident import IncidentModel
 from ..services.mongo_service import MongoService
+from ..services.enrichment_service import EnrichmentService
 from config import Config
 
 logger = logging.getLogger(__name__)
@@ -190,6 +191,7 @@ class NewsScraper:
             }
         ]
         self.mongo_service = MongoService()
+        self.enrichment_service = EnrichmentService()
         
     async def scrape_and_save(self) -> int:
         """Scrape news data and save to MongoDB"""
@@ -198,10 +200,14 @@ class NewsScraper:
             saved_count = 0
             
             for incident in incidents:
-                if self.mongo_service.save_incident(incident):
+                # Convert model to dict, enrich, then save
+                incident_dict = incident.to_dict()
+                enriched_data = await self.enrichment_service.enrich_incident(incident_dict)
+                
+                if self.mongo_service.save_incident(enriched_data):
                     saved_count += 1
             
-            logger.info(f"News scraper: Collected {len(incidents)} incidents, saved {saved_count}")
+            logger.info(f"News scraper: Collected {len(incidents)} incidents, enriched and saved {saved_count}")
             return saved_count
             
         except Exception as e:
@@ -233,7 +239,7 @@ class NewsScraper:
                 async with session.get(source["url"]) as response:
                     if response.status == 200:
                         content = await response.text()
-                        soup = BeautifulSoup(content, 'html.parser')
+                        soup = BeautifulSoup(content, 'lxml')
                         
                         # Find articles with multiple selector strategies
                         articles = []

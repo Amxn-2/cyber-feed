@@ -2,8 +2,25 @@
 const express = require('express');
 const axios = require('axios');
 const logger = require('../utils/logger');
+const { emitNewIncident } = require('../services/socketService');
 
 const router = express.Router();
+
+/**
+ * Handle notification from scraper about a new incident
+ */
+router.post('/notify', (req, res) => {
+  try {
+    const { incident } = req.body;
+    if (incident) {
+      emitNewIncident(incident);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Failed to handle incident notification:', error);
+    res.status(500).json({ success: false });
+  }
+});
 
 // Python scraper service URL
 const PYTHON_SCRAPER_URL = process.env.PYTHON_SCRAPER_URL || 'http://localhost:5000';

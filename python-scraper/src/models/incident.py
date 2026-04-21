@@ -22,6 +22,16 @@ class IncidentModel(BaseModel):
     hash: str = Field(..., description="Unique hash for deduplication")
     tags: Optional[List[str]] = Field(default=[], description="Incident tags")
     is_verified: bool = Field(default=False, description="Verification status")
+    
+    # ML and Intelligence Fields
+    entities: Optional[dict] = Field(default={"organizations": [], "locations": [], "technologies": [], "threat_actors": []})
+    mitre_techniques: Optional[List[dict]] = Field(default=[])
+    cve_ids: Optional[List[str]] = Field(default=[])
+    cvss_score: Optional[float] = Field(default=0.0)
+    ml_severity: Optional[str] = Field(None)
+    ml_confidence: Optional[float] = Field(None)
+    sector_tags: Optional[List[str]] = Field(default=[])
+    
     createdAt: Optional[datetime] = Field(default_factory=datetime.utcnow, alias="created_at")
     updatedAt: Optional[datetime] = Field(default_factory=datetime.utcnow, alias="updated_at")
     
